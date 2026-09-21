@@ -5,6 +5,20 @@ for them, then an original, fully illustrated children's book starring that char
 actually shows the character performing the story's action, generated via image-to-image from one reference image
 so they stay recognizable throughout.
 
+> ### ⚠️ Real AI generation costs real money
+>
+> Adding an `OPENAI_API_KEY` makes every generated book place **real, billed API calls** — a character reference
+> image, a cover, and one image per page. A 10-page book is **12 images**, each priced per-call by OpenAI
+> (`gpt-image-1`); clicking "Regenerate Whole Story" or "Regenerate Image" makes more billed calls the same way.
+> Costs add up fast if you're experimenting. Before adding a key:
+>
+> - Set a **hard monthly spending limit** at platform.openai.com → Settings → Billing → Limits.
+> - Leave the key out entirely to use **demo mode** (see below) — fully free, fully offline, no account needed —
+>   while you're just trying the app out.
+> - To stop spending immediately at any time: delete/blank `OPENAI_API_KEY` in `.env.local` **and** revoke the key
+>   at platform.openai.com/api-keys (blanking the local file alone doesn't stop the key from being used elsewhere
+>   if it ever leaked — always revoke on OpenAI's side too).
+
 ## Features
 
 - **Story creation wizard** — child's name, boy/girl, age range, theme, page length, illustration style (default:
@@ -126,6 +140,9 @@ Then fill in whichever keys you have in `.env.local`:
 Leave one or both blank to run in **demo mode** — the app still works end-to-end offline (see Demo/offline mode
 above). This is clearly indicated in the UI with a "Demo mode" badge.
 
+> **Adding `OPENAI_API_KEY` here means every generated book will place real, billed API calls — see the cost
+> warning at the top of this README before you do.**
+
 API keys are read only on the server (inside `src/lib/ai/*` and the `src/app/api/*` route handlers) via
 `process.env`. They are never sent to the browser or included in any client bundle.
 
@@ -147,6 +164,32 @@ npm run storybook           # component workshop (see src/components/**/*.storie
 npm run build-storybook      # static Storybook build
 ```
 
+## How to use it
+
+1. **Home** — click **Create Your Story**. If you have saved books already, they show up here under "Continue a
+   Story" (cover thumbnail, title, child's name, when it was made) — click one to reopen it instantly with no
+   regeneration, or click the 🗑 on a card to delete it.
+2. **Step 1 — Child**: enter the child's name and pick **Boy** or **Girl**. No photo is collected — the character is
+   generated purely from this and the age you pick next.
+3. **Step 2 — Story details**: pick an **age range** (changes vocabulary/sentence length), a **theme** (Space
+   Adventure, Under the Sea, Jungle Safari, etc. — 8 to choose from), a **story length** (8/10/12 pages), and an
+   **illustration style** (3D Animated Storybook, Whimsical Hand-Painted Storybook, Colorful Picture Book, Playful
+   Cartoon, Soft Pastel, or Vibrant Digital Art).
+4. **Step 3 — Review**: confirm your choices, then click **Generate Story**. You'll see staged progress —
+   "Creating your character…" → "Writing your adventure…" → "Illustrating page X of N…". With real AI this takes
+   roughly 30–60 seconds per image (character + cover + one per page); demo mode is instant.
+5. **Reading the book**: the cover and each page show large artwork with the story text overlaid at the bottom.
+   Use the big ‹ › arrows or the dots below the artwork to navigate, or **🔊 Read Aloud** to have the current page
+   read to you (play/pause/resume).
+6. **Fixing something you don't like**, from the toolbar below the artwork:
+   - **Regenerate Image** — redraws just the current illustration (cover or page), same text.
+   - **Regenerate Page** *(interior pages only)* — rewrites that page's text (keeping the rest of the book and that
+     page's role in the story intact), then redraws its illustration to match.
+   - **Regenerate Whole Story** — writes an entirely new story and re-illustrates every page, using the same
+     character.
+7. Every finished (or regenerated) book **auto-saves to this browser** (see Local story library below) — closing the
+   tab or reloading won't lose it.
+
 ## Notes & limitations
 
 - **No photo upload**: the character is generated purely from the child's name, gender, and age — no image is
@@ -162,3 +205,7 @@ npm run build-storybook      # static Storybook build
   round-tripping it on every page.
 - **Demo mode** is deterministic per (name, theme) for the character's look, but includes a variation seed so
   regenerating still produces a visibly different scene layout even without API credentials.
+
+## License
+
+[MIT](./LICENSE) © 2026 Kishore Tenneti
