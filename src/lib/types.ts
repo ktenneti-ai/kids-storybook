@@ -84,6 +84,9 @@ export interface StoryPage extends StoryPageContent {
 }
 
 export interface Story {
+  /** Stable id used as the IndexedDB key for local persistence (see src/lib/storage.ts). */
+  id: string;
+  createdAt: number;
   title: string;
   input: StoryInput;
   /** The single reference image every page/cover illustration is generated from (image-to-image). */

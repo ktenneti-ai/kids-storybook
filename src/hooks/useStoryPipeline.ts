@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saveStory } from "@/lib/storage";
 import type {
   ApiErrorResponse,
   CharacterReferenceResponse,
@@ -53,6 +54,17 @@ export function useStoryPipeline() {
   useEffect(() => {
     storyRef.current = story;
   }, [story]);
+
+  // Auto-save the finished (or freshly regenerated) story to IndexedDB so it
+  // survives a page reload without paying for/waiting on a full
+  // regeneration. Fires once when the pipeline settles into "ready", and
+  // again after any regenerate* action (those mutate `story` while phase
+  // stays "ready" the whole time).
+  useEffect(() => {
+    if (story && phase === "ready") {
+      void saveStory(story).catch((err) => console.error("Failed to save story locally:", err));
+    }
+  }, [story, phase]);
 
   const fetchIllustration = useCallback(async (s: Story, target: IllustrationTarget, seed: number, forceMock: boolean) => {
     return postJson<IllustrationResponse>("/api/illustration", {
@@ -119,7 +131,13 @@ export function useStoryPipeline() {
   );
 
   const writeStoryAndIllustrate = useCallback(
-    async (input: StoryInput, character: { imageUrl: string; description: string; mode: "ai" | "mock" }, useMock: boolean, variationHint?: string) => {
+    async (
+      input: StoryInput,
+      character: { imageUrl: string; description: string; mode: "ai" | "mock" },
+      useMock: boolean,
+      variationHint?: string,
+      idOverride?: { id: string; createdAt: number }
+    ) => {
       setPhase("writing");
       setCurrentTask("Writing your adventure…");
 
@@ -142,6 +160,8 @@ export function useStoryPipeline() {
       }
 
       const initialStory: Story = {
+        id: idOverride?.id ?? crypto.randomUUID(),
+        createdAt: idOverride?.createdAt ?? Date.now(),
         title: storyResult.data.title,
         input,
         characterReferenceImageUrl: character.imageUrl,
@@ -215,7 +235,8 @@ export function useStoryPipeline() {
       input,
       { imageUrl: s.characterReferenceImageUrl, description: s.characterDescription, mode: s.mode },
       preferMock,
-      "Please write a fresh variation with different specific plot details, discoveries, and dialogue than any previous attempt, while keeping the same theme, tone, age-appropriateness, and character."
+      "Please write a fresh variation with different specific plot details, discoveries, and dialogue than any previous attempt, while keeping the same theme, tone, age-appropriateness, and character.",
+      { id: s.id, createdAt: s.createdAt }
     );
   }, [preferMock, writeStoryAndIllustrate]);
 
@@ -328,6 +349,19 @@ export function useStoryPipeline() {
     [fetchIllustration, preferMock]
   );
 
+  /** Restores a previously saved story (from IndexedDB) directly into reader state, skipping generation entirely. */
+  const loadStory = useCallback((saved: Story) => {
+    lastInputRef.current = saved.input;
+    setError(null);
+    setCanFallbackToMock(false);
+    setCurrentTask(null);
+    setRegeneratingPageNumber(null);
+    setPreferMock(saved.mode === "mock");
+    setProgress({ done: saved.pages.length + 1, total: saved.pages.length + 1 });
+    setStory(saved);
+    setPhase("ready");
+  }, []);
+
   const reset = useCallback(() => {
     setStory(null);
     setPhase("idle");
@@ -356,6 +390,7 @@ export function useStoryPipeline() {
     regenerateCover,
     regeneratePageImage,
     regeneratePageText,
+    loadStory,
     reset,
   };
 }

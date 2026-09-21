@@ -38,6 +38,8 @@ so they stay recognizable throughout.
   color card or icon), with the character's look (skin tone, hair style/length by gender, outfit) seeded from the
   child's name so it stays consistent across the whole demo book too. Clearly labeled "Demo mode" / "Sample style"
   in the UI so it's never mistaken for real output.
+- **Local story library** — every finished (or regenerated) story auto-saves to the browser's IndexedDB, so
+  reopening the app shows it under "Continue a Story" on the home screen instead of regenerating from scratch.
 - **Responsive** — works on desktop, tablet, and mobile.
 
 ## Tech stack
@@ -151,9 +153,12 @@ npm run build-storybook      # static Storybook build
   collected or sent anywhere.
 - **Content safety**: prompts explicitly require original, non-copyrighted, gentle, age-appropriate content with no
   violence or real danger, and instruct the image model to avoid embedded text/logos/watermarks.
-- **Stateless by design**: there's no database or server session, so the client holds the character reference image
-  in memory and resends it as part of every `/api/illustration` request. That's simple and fine for personal use;
-  a production deployment would persist the reference image server-side (keyed by a story/session id) instead of
+- **Stateless server, persistent browser**: there's no database or server session — during generation the client
+  holds the character reference image in memory and resends it as part of every `/api/illustration` request. Once a
+  story finishes (or is regenerated), it's automatically saved to the browser's IndexedDB (`src/lib/storage.ts`), so
+  reopening the app shows it under "Continue a Story" on the home screen instead of requiring a full (paid)
+  regeneration. This is per-browser/per-device only — there's no cross-device sync or account system. A production
+  deployment would likely also persist the reference image server-side (keyed by a story/session id) instead of
   round-tripping it on every page.
 - **Demo mode** is deterministic per (name, theme) for the character's look, but includes a variation seed so
   regenerating still produces a visibly different scene layout even without API credentials.

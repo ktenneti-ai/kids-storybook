@@ -8,6 +8,8 @@ const PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
 const mockStory: StoryModel = {
+  id: 'story-fixture-1',
+  createdAt: Date.now(),
   title: 'Emma and the Little Star',
   input: {
     childName: 'Emma',
@@ -59,6 +61,7 @@ function mockPipeline(overrides: Partial<ReturnType<typeof useStoryPipeline>> = 
     regenerateCover: fn(),
     regeneratePageImage: fn(),
     regeneratePageText: fn(),
+    loadStory: fn(),
     reset: fn(),
     ...overrides,
   };

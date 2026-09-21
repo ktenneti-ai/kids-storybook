@@ -1,7 +1,24 @@
 import { Button } from "@/components/ui/Button";
 import { THEMES } from "@/lib/constants";
+import type { Story } from "@/lib/types";
 
-export function HomeScreen({ onStart }: { onStart: () => void }) {
+interface HomeScreenProps {
+  onStart: () => void;
+  savedStories?: Story[];
+  onOpenStory?: (story: Story) => void;
+  onDeleteStory?: (id: string) => void;
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const diffMin = Math.round((Date.now() - timestamp) / 60_000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.round(diffHr / 24)}d ago`;
+}
+
+export function HomeScreen({ onStart, savedStories = [], onOpenStory, onDeleteStory }: HomeScreenProps) {
   return (
     <main className="relative flex-1 overflow-hidden bg-linear-to-b from-violet-100 via-fuchsia-50 to-orange-50">
       <div className="pointer-events-none absolute -left-10 top-10 text-7xl opacity-30 animate-float-slow">⭐</div>
@@ -32,6 +49,58 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
             Create Your Story
           </Button>
         </div>
+
+        {savedStories.length > 0 ? (
+          <div className="mt-14 w-full text-left">
+            <h2 className="mb-4 text-center font-display text-xl font-bold text-violet-900">Continue a Story</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {savedStories.map((story) => (
+                <button
+                  key={story.id}
+                  type="button"
+                  onClick={() => onOpenStory?.(story)}
+                  className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-lg"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-violet-100">
+                    {story.coverImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={story.coverImageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-3xl">📖</div>
+                    )}
+                    {onDeleteStory ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteStory(story.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            onDeleteStory(story.id);
+                          }
+                        }}
+                        aria-label={`Delete ${story.title}`}
+                        title="Delete"
+                        className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-sm text-white opacity-0 backdrop-blur-sm transition hover:bg-rose-600 group-hover:opacity-100 focus:opacity-100"
+                      >
+                        🗑
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="truncate font-display text-sm font-bold text-violet-900">{story.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-violet-500">
+                      {story.input.childName} &middot; {formatRelativeTime(story.createdAt)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-14 grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
           {THEMES.slice(0, 8).map((theme) => (
