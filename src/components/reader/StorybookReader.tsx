@@ -145,34 +145,36 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
 
         <div className="animate-pop-in rounded-3xl bg-white p-5 shadow-xl shadow-violet-200/50 sm:p-8">
           {isCoverView ? (
-            <div className="flex flex-col items-center gap-5">
-              <IllustrationFrame
-                status={story.coverStatus}
-                imageUrl={story.coverImageUrl}
-                error={story.coverError}
-                alt={`Cover illustration for ${story.title}`}
-                aspect="portrait"
-                onRegenerate={regenerateCover}
-                regenerateLabel="Regenerate cover"
-              />
-              <div className="text-center">
-                <h1 className="font-display text-3xl font-extrabold text-violet-900 sm:text-4xl">{story.title}</h1>
-                <p className="mt-2 text-sm font-medium text-violet-500">A StoryStars original &middot; starring {story.input.childName}</p>
-              </div>
-            </div>
+            <IllustrationFrame
+              status={story.coverStatus}
+              imageUrl={story.coverImageUrl}
+              error={story.coverError}
+              alt={`Cover illustration for ${story.title}`}
+              aspect="portrait"
+              onRegenerate={regenerateCover}
+              regenerateLabel="Regenerate cover"
+              overlay={
+                <div className="text-center">
+                  <h1 className="font-display text-3xl font-extrabold text-white drop-shadow-sm sm:text-4xl">{story.title}</h1>
+                  <p className="mt-2 text-sm font-medium text-white/80">A StoryStars original &middot; starring {story.input.childName}</p>
+                </div>
+              }
+            />
           ) : (
-            <div className="flex flex-col gap-5">
-              <IllustrationFrame
-                status={currentPage!.imageStatus}
-                imageUrl={currentPage!.imageUrl}
-                error={currentPage!.imageError}
-                alt={`Illustration for page ${currentPage!.pageNumber}`}
-                onRegenerate={() => regeneratePageImage(currentPage!.pageNumber)}
-                regenerateLabel="Regenerate illustration"
-              />
-              <p className="text-center font-display text-lg leading-relaxed text-violet-900 sm:text-xl">{currentPage!.text}</p>
-              {isLastPage ? <p className="text-center text-sm font-bold uppercase tracking-widest text-fuchsia-500">🎉 The End 🎉</p> : null}
-            </div>
+            <IllustrationFrame
+              status={currentPage!.imageStatus}
+              imageUrl={currentPage!.imageUrl}
+              error={currentPage!.imageError}
+              alt={`Illustration for page ${currentPage!.pageNumber}`}
+              onRegenerate={() => regeneratePageImage(currentPage!.pageNumber)}
+              regenerateLabel="Regenerate illustration"
+              overlay={
+                <div className="text-center">
+                  <p className="font-display text-lg leading-relaxed text-white drop-shadow-sm sm:text-xl">{currentPage!.text}</p>
+                  {isLastPage ? <p className="mt-2 text-sm font-bold uppercase tracking-widest text-white/90">🎉 The End 🎉</p> : null}
+                </div>
+              }
+            />
           )}
 
           <div className="mt-6 flex items-center justify-between gap-2">

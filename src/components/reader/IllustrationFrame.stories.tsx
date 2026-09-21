@@ -28,6 +28,17 @@ export const Ready: Story = {
   },
 };
 
+export const ReadyWithTextOverlay: Story = {
+  args: {
+    status: 'ready',
+    imageUrl: PIXEL,
+    overlay: <p>Emma waved at the fox as the sun set over the meadow.</p>,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/emma waved at the fox/i)).toBeVisible();
+  },
+};
+
 export const ErrorState: Story = {
   args: { status: 'error', error: "We couldn't create this illustration right now." },
   play: async ({ canvas, userEvent, args }) => {

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import type { AssetStatus } from "@/lib/types";
 
@@ -9,9 +10,11 @@ interface IllustrationFrameProps {
   aspect?: "portrait" | "square";
   onRegenerate: () => void;
   regenerateLabel: string;
+  /** Rendered as a scrim anchored to the bottom of the image once it's ready — e.g. the page's story text, laid directly onto the illustration like a real picture-book page. */
+  overlay?: ReactNode;
 }
 
-export function IllustrationFrame({ status, imageUrl, error, alt, aspect = "square", onRegenerate, regenerateLabel }: IllustrationFrameProps) {
+export function IllustrationFrame({ status, imageUrl, error, alt, aspect = "square", onRegenerate, regenerateLabel, overlay }: IllustrationFrameProps) {
   const aspectClass = aspect === "portrait" ? "aspect-[2/3]" : "aspect-square";
 
   return (
@@ -19,6 +22,12 @@ export function IllustrationFrame({ status, imageUrl, error, alt, aspect = "squa
       {status === "ready" && imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt={alt} className="h-full w-full object-cover" />
+      ) : null}
+
+      {status === "ready" && overlay ? (
+        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/45 to-transparent px-4 pb-4 pt-12 sm:px-6 sm:pb-6 sm:pt-16">
+          {overlay}
+        </div>
       ) : null}
 
       {status === "loading" || status === "idle" ? (
@@ -48,7 +57,7 @@ export function IllustrationFrame({ status, imageUrl, error, alt, aspect = "squa
         <button
           type="button"
           onClick={onRegenerate}
-          className="absolute bottom-2 right-2 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100 focus:opacity-100"
+          className="absolute top-2 right-2 rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100 focus:opacity-100"
         >
           🔄 {regenerateLabel}
         </button>
