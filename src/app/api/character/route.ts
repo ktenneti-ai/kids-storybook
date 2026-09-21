@@ -24,14 +24,28 @@ export async function POST(req: NextRequest): Promise<NextResponse<CharacterRefe
   if (!hasImageProvider() || forceMock) {
     const description = generateMockCharacterDescription({ childName, gender, age });
     const imageUrl = generateMockCharacterPortrait({ childName, gender, themeId });
+    // TODO(dev-diagnostics): remove once real-vs-demo character generation has been verified end to end.
+    console.log("[character-diagnostics]", {
+      theme: themeId,
+      illustrationStyle,
+      imageProvider: "mock",
+      reason: !hasImageProvider() ? "OPENAI_API_KEY not configured" : "forceMock requested",
+      imageUrl: `${imageUrl.slice(0, 60)}... (${imageUrl.length} chars)`,
+    });
     return NextResponse.json({ imageUrl, description, mode: "mock" });
   }
 
   try {
     const { imageUrl, description } = await createCharacterReference({ childName, gender, age, illustrationStyle });
+    console.log("[character-diagnostics]", {
+      theme: themeId,
+      illustrationStyle,
+      imageProvider: "openai:gpt-image-1",
+      imageUrl: `${imageUrl.slice(0, 60)}... (${imageUrl.length} chars)`,
+    });
     return NextResponse.json({ imageUrl, description, mode: "ai" });
   } catch (err) {
-    console.error("[api/character] generation failed:", err);
+    console.error("[api/character] generation failed:", { theme: themeId, illustrationStyle, err });
     return NextResponse.json(
       { error: "We couldn't create your character right now. You can try again or continue in demo mode.", canFallbackToMock: true },
       { status: 502 }

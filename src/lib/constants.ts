@@ -105,17 +105,17 @@ export const STORY_LENGTHS = [8, 10, 12] as const;
 export const ILLUSTRATION_STYLES: StyleOption[] = [
   {
     id: "pixar-3d",
-    label: "3D Pixar-Style Cartoon",
+    label: "3D Animated Storybook",
     description: "Glossy, richly detailed 3D-rendered movie style, like a modern animated film.",
     promptFragment:
-      "glossy, richly detailed 3D-rendered animated movie style (Pixar/Disney-caliber character animation), vibrant volumetric lighting and sun rays, expressive large eyes, soft global illumination and subsurface scattering on skin, cinematic depth of field, ultra-detailed textures and materials",
+      "glossy, richly detailed 3D-rendered animated movie style, polished character animation, vibrant volumetric lighting and sun rays, expressive large eyes, soft global illumination and subsurface scattering on skin, cinematic depth of field, ultra-detailed textures and materials",
   },
   {
     id: "ghibli-pixar",
-    label: "Ghibli-Pixar Storybook",
-    description: "Soft 2D animation blending Studio Ghibli's warmth with Pixar's polish.",
+    label: "Whimsical Hand-Painted Storybook",
+    description: "Soft 2D animation with painterly, hand-crafted warmth and polish.",
     promptFragment:
-      "soft 2D modern animation style blending Studio Ghibli's painterly, hand-crafted backgrounds and gentle warmth with Pixar's polished, expressive character appeal, vibrant yet warm color palette, gentle cinematic lighting, whimsical storybook aesthetic, high detail",
+      "soft 2D hand-painted animation style with painterly, hand-crafted backgrounds and gentle warmth, polished and expressive character appeal, vibrant yet warm color palette, gentle cinematic lighting, whimsical storybook aesthetic, high detail",
   },
   {
     id: "storybook-watercolor",

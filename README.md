@@ -8,7 +8,7 @@ so they stay recognizable throughout.
 ## Features
 
 - **Story creation wizard** — child's name, boy/girl, age range, theme, page length, illustration style (default:
-  glossy 3D Pixar-style cartoon).
+  glossy 3D animated storybook).
 - **Name/gender → cartoon character** — a single reusable cartoon character reference image is generated from the
   child's name, gender, and age (`createCharacterReference`), in the chosen illustration style.
 - **Original story generation** (`generateStory`) — an 8/10/12-page story (10 by default) with a title, a consistent

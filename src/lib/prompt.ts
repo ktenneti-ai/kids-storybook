@@ -114,7 +114,7 @@ export function buildStoryImagePrompt(params: {
     "Using the exact character shown in the reference image, illustrate this children's storybook page as a rich, luminous full-page scene — the quality of a page from a premium published picture book, not a simple sketch, icon, or vector illustration.",
     `Character reference notes (for extra guidance alongside the reference image): ${params.characterDescription}.`,
     `World: ${params.settingDescription}.`,
-    `This page's moment, which must visually match the story text "${params.storyPageText}": ${params.sceneDescription}.`,
+    `This page's moment, which must visually match the story text "${params.storyPageText}": ${params.sceneDescription.replace(/\.+$/, "")}.`,
     buildVividnessPrompt(),
     "The character must be clearly present and actively performing the described action, with an expressive pose and face that matches the story's mood.",
     buildConsistencyPrompt(params.illustrationStyle),

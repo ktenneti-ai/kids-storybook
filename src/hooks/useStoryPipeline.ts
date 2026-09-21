@@ -67,6 +67,7 @@ export function useStoryPipeline() {
       childName: s.input.childName,
       gender: s.input.gender,
       isCover: target.kind === "cover",
+      pageNumber: target.kind === "page" ? target.pageNumber : undefined,
       forceMock,
       seed,
     });
