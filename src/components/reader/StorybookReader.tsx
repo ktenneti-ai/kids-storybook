@@ -18,8 +18,19 @@ interface StorybookReaderProps {
 }
 
 export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReaderProps) {
-  const { story, phase, error, canFallbackToMock, progress, retry, continueInDemoMode, regenerateStory, regenerateCover, regeneratePageImage } =
-    pipeline;
+  const {
+    story,
+    phase,
+    currentTask,
+    error,
+    canFallbackToMock,
+    progress,
+    retry,
+    continueInDemoMode,
+    regenerateStory,
+    regenerateCover,
+    regeneratePageImage,
+  } = pipeline;
   const [pageIndex, setPageIndex] = useState(0);
   const readAloud = useReadAloud();
 
@@ -30,12 +41,20 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
 
   useEffect(() => () => readAloud.stop(), [readAloud]);
 
-  if (phase === "writing" || (!story && phase !== "error")) {
+  if (phase === "creating-character" || phase === "writing" || (!story && phase !== "error")) {
+    const isCharacterPhase = phase === "creating-character";
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 bg-linear-to-b from-violet-100 to-orange-50 px-6 py-20 text-center">
+        <span className="text-4xl" aria-hidden>
+          {isCharacterPhase ? "🎨" : "✍️"}
+        </span>
         <Spinner className="h-10 w-10" />
-        <h2 className="font-display text-2xl font-bold text-violet-900">Writing your story&hellip;</h2>
-        <p className="max-w-sm text-sm text-violet-600">Our storyteller is dreaming up an original adventure just for this book.</p>
+        <h2 className="font-display text-2xl font-bold text-violet-900">{currentTask ?? "Getting started…"}</h2>
+        <p className="max-w-sm text-sm text-violet-600">
+          {isCharacterPhase
+            ? "Turning the photo into a storybook character who'll star in every page."
+            : "Our storyteller is dreaming up an original adventure just for this book."}
+        </p>
       </main>
     );
   }
@@ -84,6 +103,15 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
+            {story.characterReferenceImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={story.characterReferenceImageUrl}
+                alt={`${story.input.childName}'s storybook character`}
+                title={`${story.input.childName}'s storybook character`}
+                className="h-9 w-9 rounded-full border-2 border-white object-cover shadow-sm"
+              />
+            ) : null}
             <Badge>
               {theme.emoji} {theme.label}
             </Badge>
@@ -101,7 +129,7 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
 
         {isIllustrating ? (
           <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
-            <ProgressBar done={progress.done} total={progress.total} label="Illustrating your storybook" />
+            <ProgressBar done={progress.done} total={progress.total} label={currentTask ?? "Illustrating your storybook"} />
           </div>
         ) : null}
 

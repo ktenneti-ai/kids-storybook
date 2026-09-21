@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildCoverSceneDescription } from "@/lib/prompt";
-import type { ApiErrorResponse, IllustrationResponse, Story, StoryInput, StoryTextResponse } from "@/lib/types";
+import type { ApiErrorResponse, CharacterReferenceResponse, IllustrationResponse, Story, StoryInput, StoryTextResponse } from "@/lib/types";
 
-export type PipelinePhase = "idle" | "writing" | "illustrating" | "ready" | "error";
+export type PipelinePhase = "idle" | "creating-character" | "writing" | "illustrating" | "ready" | "error";
 
 interface IllustrationTarget {
   kind: "cover" | "page";
   pageNumber?: number;
-  sceneDescription: string;
+  sceneDescription?: string;
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; error: string; canFallbackToMock: boolean }> {
@@ -30,20 +29,10 @@ async function postJson<T>(url: string, body: unknown): Promise<{ ok: true; data
   }
 }
 
-async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
-  let index = 0;
-  async function next(): Promise<void> {
-    const current = index++;
-    if (current >= items.length) return;
-    await worker(items[current]);
-    return next();
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => next()));
-}
-
 export function useStoryPipeline() {
   const [story, setStory] = useState<Story | null>(null);
   const [phase, setPhase] = useState<PipelinePhase>("idle");
+  const [currentTask, setCurrentTask] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [canFallbackToMock, setCanFallbackToMock] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -55,48 +44,47 @@ export function useStoryPipeline() {
     storyRef.current = story;
   }, [story]);
 
-  const fetchIllustration = useCallback(
-    async (s: Story, target: IllustrationTarget, seed: number, forceMock: boolean) => {
-      return postJson<IllustrationResponse>("/api/illustration", {
-        illustrationStyle: s.input.illustrationStyle,
-        characterDescription: s.characterDescription,
-        settingDescription: s.settingDescription,
-        sceneDescription: target.sceneDescription,
-        themeId: s.input.theme,
-        isCover: target.kind === "cover",
-        forceMock,
-        seed,
-      });
-    },
-    []
-  );
+  const fetchIllustration = useCallback(async (s: Story, target: IllustrationTarget, seed: number, forceMock: boolean) => {
+    return postJson<IllustrationResponse>("/api/illustration", {
+      illustrationStyle: s.input.illustrationStyle,
+      characterReferenceImageUrl: s.characterReferenceImageUrl,
+      settingDescription: s.settingDescription,
+      sceneDescription: target.kind === "page" ? target.sceneDescription : undefined,
+      title: target.kind === "cover" ? s.title : undefined,
+      themeId: s.input.theme,
+      childName: s.input.childName,
+      isCover: target.kind === "cover",
+      forceMock,
+      seed,
+    });
+  }, []);
 
   const runIllustrations = useCallback(
     async (s: Story, forceMock: boolean) => {
-      const targets: IllustrationTarget[] = [
-        { kind: "cover", sceneDescription: buildCoverSceneDescription(s.input.theme, s.title) },
-        ...s.pages.map((p) => ({ kind: "page" as const, pageNumber: p.pageNumber, sceneDescription: p.illustrationPrompt })),
-      ];
-      let done = 0;
-      setProgress({ done: 0, total: targets.length });
+      const total = s.pages.length + 1; // +1 for the cover
+      setProgress({ done: 0, total });
 
-      await runPool(targets, 3, async (target) => {
+      setCurrentTask("Illustrating your cover…");
+      const coverSeed = Date.now() + Math.floor(Math.random() * 10_000);
+      const coverResult = await fetchIllustration(s, { kind: "cover" }, coverSeed, forceMock);
+      setStory((prev) => {
+        if (!prev) return prev;
+        return coverResult.ok
+          ? { ...prev, coverStatus: "ready", coverImageUrl: coverResult.data.imageUrl, coverError: undefined }
+          : { ...prev, coverStatus: "error", coverError: coverResult.error };
+      });
+      setProgress({ done: 1, total });
+
+      for (const page of s.pages) {
+        setCurrentTask(`Illustrating page ${page.pageNumber} of ${s.pages.length}…`);
         const seed = Date.now() + Math.floor(Math.random() * 10_000);
-        const result = await fetchIllustration(s, target, seed, forceMock);
-        done += 1;
-        setProgress({ done, total: targets.length });
-
+        const result = await fetchIllustration(s, { kind: "page", pageNumber: page.pageNumber, sceneDescription: page.illustrationPrompt }, seed, forceMock);
         setStory((prev) => {
           if (!prev) return prev;
-          if (target.kind === "cover") {
-            return result.ok
-              ? { ...prev, coverStatus: "ready", coverImageUrl: result.data.imageUrl, coverError: undefined }
-              : { ...prev, coverStatus: "error", coverError: result.error };
-          }
           return {
             ...prev,
             pages: prev.pages.map((p) =>
-              p.pageNumber === target.pageNumber
+              p.pageNumber === page.pageNumber
                 ? result.ok
                   ? { ...p, imageStatus: "ready" as const, imageUrl: result.data.imageUrl, imageError: undefined }
                   : { ...p, imageStatus: "error" as const, imageError: result.error }
@@ -104,9 +92,53 @@ export function useStoryPipeline() {
             ),
           };
         });
-      });
+        setProgress((prev) => ({ done: prev.done + 1, total }));
+      }
+      setCurrentTask(null);
     },
     [fetchIllustration]
+  );
+
+  const writeStoryAndIllustrate = useCallback(
+    async (input: StoryInput, character: { imageUrl: string; description: string; mode: "ai" | "mock" }, useMock: boolean, variationHint?: string) => {
+      setPhase("writing");
+      setCurrentTask("Writing your adventure…");
+
+      const storyResult = await postJson<StoryTextResponse>("/api/story", {
+        childName: input.childName,
+        age: input.age,
+        theme: input.theme,
+        length: input.length,
+        forceMock: useMock,
+        variationHint,
+      });
+
+      if (!storyResult.ok) {
+        setPhase("error");
+        setError(storyResult.error);
+        setCanFallbackToMock(storyResult.canFallbackToMock);
+        setCurrentTask(null);
+        return;
+      }
+
+      const initialStory: Story = {
+        title: storyResult.data.title,
+        input,
+        characterReferenceImageUrl: character.imageUrl,
+        characterReferenceStatus: "ready",
+        characterDescription: character.description,
+        settingDescription: storyResult.data.settingDescription,
+        coverStatus: "loading",
+        pages: storyResult.data.pages.map((p) => ({ ...p, imageStatus: "loading" as const })),
+        mode: character.mode === "mock" || storyResult.data.mode === "mock" ? "mock" : "ai",
+      };
+      setStory(initialStory);
+      setPhase("illustrating");
+
+      await runIllustrations(initialStory, useMock);
+      setPhase("ready");
+    },
+    [runIllustrations]
   );
 
   const generate = useCallback(
@@ -115,39 +147,32 @@ export function useStoryPipeline() {
       const useMock = options?.forceMock ?? preferMock;
       setError(null);
       setCanFallbackToMock(false);
-      setPhase("writing");
       setStory(null);
       setProgress({ done: 0, total: 0 });
 
-      const result = await postJson<StoryTextResponse>("/api/story", {
-        ...input,
+      setPhase("creating-character");
+      setCurrentTask("Creating your character…");
+
+      const characterResult = await postJson<CharacterReferenceResponse>("/api/character", {
+        childName: input.childName,
+        age: input.age,
+        illustrationStyle: input.illustrationStyle,
+        photoDataUrl: input.photoDataUrl,
+        themeId: input.theme,
         forceMock: useMock,
-        variationHint: options?.variationHint,
       });
 
-      if (!result.ok) {
+      if (!characterResult.ok) {
         setPhase("error");
-        setError(result.error);
-        setCanFallbackToMock(result.canFallbackToMock);
+        setError(characterResult.error);
+        setCanFallbackToMock(characterResult.canFallbackToMock);
+        setCurrentTask(null);
         return;
       }
 
-      const initialStory: Story = {
-        title: result.data.title,
-        input,
-        characterDescription: result.data.characterDescription,
-        settingDescription: result.data.settingDescription,
-        coverStatus: "loading",
-        pages: result.data.pages.map((p) => ({ ...p, imageStatus: "loading" as const })),
-        mode: result.data.mode,
-      };
-      setStory(initialStory);
-      setPhase("illustrating");
-
-      await runIllustrations(initialStory, result.data.mode === "mock" || useMock);
-      setPhase("ready");
+      await writeStoryAndIllustrate(input, characterResult.data, useMock, options?.variationHint);
     },
-    [preferMock, runIllustrations]
+    [preferMock, writeStoryAndIllustrate]
   );
 
   const retry = useCallback(() => {
@@ -160,24 +185,26 @@ export function useStoryPipeline() {
   }, [generate]);
 
   const regenerateStory = useCallback(() => {
-    if (!lastInputRef.current) return;
-    void generate(lastInputRef.current, {
-      variationHint:
-        "Please write a fresh variation with different specific plot details, discoveries, and dialogue than any previous attempt, while keeping the same theme, tone, age-appropriateness, and character.",
-    });
-  }, [generate]);
+    const s = storyRef.current;
+    const input = lastInputRef.current;
+    if (!s || !input || !s.characterReferenceImageUrl) return;
+    setError(null);
+    setCanFallbackToMock(false);
+    setStory(null);
+    void writeStoryAndIllustrate(
+      input,
+      { imageUrl: s.characterReferenceImageUrl, description: s.characterDescription, mode: s.mode },
+      preferMock,
+      "Please write a fresh variation with different specific plot details, discoveries, and dialogue than any previous attempt, while keeping the same theme, tone, age-appropriateness, and character."
+    );
+  }, [preferMock, writeStoryAndIllustrate]);
 
   const regenerateCover = useCallback(async () => {
     const s = storyRef.current;
     if (!s) return;
     setStory((prev) => (prev ? { ...prev, coverStatus: "loading", coverError: undefined } : prev));
     const seed = Date.now() + Math.floor(Math.random() * 10_000);
-    const result = await fetchIllustration(
-      s,
-      { kind: "cover", sceneDescription: buildCoverSceneDescription(s.input.theme, s.title) },
-      seed,
-      s.mode === "mock" || preferMock
-    );
+    const result = await fetchIllustration(s, { kind: "cover" }, seed, s.mode === "mock" || preferMock);
     setStory((prev) => {
       if (!prev) return prev;
       return result.ok
@@ -219,6 +246,7 @@ export function useStoryPipeline() {
   const reset = useCallback(() => {
     setStory(null);
     setPhase("idle");
+    setCurrentTask(null);
     setError(null);
     setCanFallbackToMock(false);
     setProgress({ done: 0, total: 0 });
@@ -229,6 +257,7 @@ export function useStoryPipeline() {
   return {
     story,
     phase,
+    currentTask,
     error,
     canFallbackToMock,
     progress,

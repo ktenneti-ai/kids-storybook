@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildCharacterAnalysisPrompt, buildStoryPrompt } from "../prompt";
-import type { AgeRangeId, StoryInput, StoryPageContent } from "../types";
+import type { AgeRangeId, StoryPageContent } from "../types";
 
 const TEXT_MODEL = process.env.ANTHROPIC_TEXT_MODEL || "claude-sonnet-5";
 
@@ -97,9 +97,9 @@ function validateStoryPayload(payload: unknown, expectedLength: number): { title
   return { title, settingDescription, pages };
 }
 
-export async function generateStoryText(
-  input: StoryInput,
-  characterDescription: string,
+/** Writes the original story text: title, world/setting description, and page-by-page content. */
+export async function generateStory(
+  input: { childName: string; age: AgeRangeId; theme: string; length: number },
   variationHint?: string
 ): Promise<{ title: string; settingDescription: string; pages: StoryPageContent[] }> {
   const anthropic = getClient();
@@ -108,7 +108,7 @@ export async function generateStoryText(
   const response = await anthropic.messages.create({
     model: TEXT_MODEL,
     max_tokens: 4096,
-    messages: [{ role: "user", content: buildStoryPrompt(input, characterDescription, variationHint) }],
+    messages: [{ role: "user", content: buildStoryPrompt(input, variationHint) }],
   });
 
   const raw = response.content

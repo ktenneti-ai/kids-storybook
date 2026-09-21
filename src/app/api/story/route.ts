@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeCharacterPhoto, generateStoryText, hasTextProvider } from "@/lib/ai/text";
-import { generateMockCharacterDescription, generateMockStoryText } from "@/lib/mock/mockStory";
-import { buildDefaultCharacterDescription } from "@/lib/prompt";
+import { generateStory, hasTextProvider } from "@/lib/ai/text";
+import { generateMockStoryText } from "@/lib/mock/mockStory";
 import { validateStoryInput } from "@/lib/validation";
 import type { ApiErrorResponse, StoryTextResponse } from "@/lib/types";
 
@@ -23,25 +22,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<StoryTextResp
   const variationHint = typeof bodyRecord.variationHint === "string" ? bodyRecord.variationHint : undefined;
 
   if (!hasTextProvider() || forceMock) {
-    const characterDescription = generateMockCharacterDescription(input);
-    const story = generateMockStoryText(input, characterDescription, Date.now());
+    const story = generateMockStoryText(input, Date.now());
     return NextResponse.json(story);
   }
 
   try {
-    const characterDescription = input.photoDataUrl
-      ? await analyzeCharacterPhoto(input.photoDataUrl, input.childName, input.age)
-      : buildDefaultCharacterDescription(input);
-
-    const { title, settingDescription, pages } = await generateStoryText(input, characterDescription, variationHint);
-
-    return NextResponse.json({
-      title,
-      settingDescription,
-      characterDescription,
-      pages,
-      mode: "ai",
-    });
+    const { title, settingDescription, pages } = await generateStory(input, variationHint);
+    return NextResponse.json({ title, settingDescription, pages, mode: "ai" });
   } catch (err) {
     console.error("[api/story] generation failed:", err);
     return NextResponse.json(

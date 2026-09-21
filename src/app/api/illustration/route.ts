@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateIllustration, hasImageProvider } from "@/lib/ai/image";
-import { generateMockIllustration } from "@/lib/mock/mockImage";
-import { buildIllustrationPrompt } from "@/lib/prompt";
+import { generateCover, generateStoryImage, hasImageProvider } from "@/lib/ai/image";
+import { generateDemoStoryIllustration } from "@/lib/mock/mockImage";
 import { validateIllustrationRequest } from "@/lib/validation";
 import type { ApiErrorResponse, IllustrationResponse } from "@/lib/types";
 
@@ -17,23 +16,26 @@ export async function POST(req: NextRequest): Promise<NextResponse<IllustrationR
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
-  const { illustrationStyle, characterDescription, settingDescription, sceneDescription, themeId, isCover, forceMock, seed } =
+  const { illustrationStyle, characterReferenceImageUrl, settingDescription, sceneDescription, title, themeId, isCover, forceMock, seed } =
     validation.value;
+  const bodyRecord = body as Record<string, unknown>;
+  const childName = typeof bodyRecord.childName === "string" ? bodyRecord.childName : "";
 
   if (!hasImageProvider() || forceMock) {
-    const imageUrl = generateMockIllustration({ themeId, sceneDescription, isCover, seed });
+    const imageUrl = generateDemoStoryIllustration({
+      themeId,
+      childName,
+      sceneDescription: isCover ? title : sceneDescription,
+      isCover,
+      seed,
+    });
     return NextResponse.json({ imageUrl, mode: "mock" });
   }
 
   try {
-    const prompt = buildIllustrationPrompt({
-      illustrationStyle,
-      characterDescription,
-      settingDescription,
-      sceneDescription,
-      isCover,
-    });
-    const imageUrl = await generateIllustration(prompt, isCover);
+    const imageUrl = isCover
+      ? await generateCover({ characterReferenceImageUrl, title, themeId, illustrationStyle, settingDescription })
+      : await generateStoryImage({ characterReferenceImageUrl, sceneDescription, settingDescription, illustrationStyle });
     return NextResponse.json({ imageUrl, mode: "ai" });
   } catch (err) {
     console.error("[api/illustration] generation failed:", err);

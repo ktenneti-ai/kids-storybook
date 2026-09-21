@@ -1,5 +1,5 @@
-import { findAge, findTheme } from "../constants";
-import type { StoryInput, StoryPageContent, StoryTextResponse } from "../types";
+import { findTheme } from "../constants";
+import type { AgeRangeId, StoryPageContent, StoryTextResponse } from "../types";
 import { hashString, mulberry32 } from "./random";
 
 interface ThemePack {
@@ -160,25 +160,13 @@ const THEME_PACKS: Record<string, ThemePack> = {
   },
 };
 
-export function generateMockCharacterDescription(input: StoryInput): string {
-  const age = findAge(input.age);
-  const base = `${input.childName}, a cheerful ${age.label.replace(
-    " years",
-    "-year-old"
-  )} child with a bright smile and warm, expressive eyes, drawn in a friendly, inclusive style`;
-  return input.photoDataUrl
-    ? `${base} (demo mode shows a generic look — add an API key to analyze the uploaded photo)`
-    : `${base} with simple, everyday play clothes`;
-}
-
 function buildRoles(length: number): string[] {
   const risingCount = Math.max(0, length - 6);
   return ["opening", "companion", ...Array(risingCount).fill("rising"), "challenge", "climax", "resolution", "ending"];
 }
 
 export function generateMockStoryText(
-  input: StoryInput,
-  characterDescription: string,
+  input: { childName: string; age: AgeRangeId; theme: string; length: number },
   variationSeed = 0
 ): StoryTextResponse {
   const theme = findTheme(input.theme);
@@ -232,7 +220,6 @@ export function generateMockStoryText(
   return {
     title: `${name} and the ${theme.titleNoun}`,
     settingDescription: `${theme.promptFragment}, drawn with a warm, consistent color palette and cozy lighting throughout the book`,
-    characterDescription,
     pages,
     mode: "mock",
   };

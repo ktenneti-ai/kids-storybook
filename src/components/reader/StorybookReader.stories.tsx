@@ -17,6 +17,8 @@ const mockStory: StoryModel = {
     illustrationStyle: 'storybook-watercolor',
     photoDataUrl: null,
   },
+  characterReferenceImageUrl: PIXEL,
+  characterReferenceStatus: 'ready',
   characterDescription: 'Emma, a cheerful child with a bright smile',
   settingDescription: 'a whimsical outer-space adventure with candy-colored planets',
   coverImageUrl: PIXEL,
@@ -44,6 +46,7 @@ function mockPipeline(overrides: Partial<ReturnType<typeof useStoryPipeline>> = 
   return {
     story: mockStory,
     phase: 'ready',
+    currentTask: null,
     error: null,
     canFallbackToMock: false,
     progress: { done: 3, total: 3 },

@@ -11,7 +11,7 @@ export interface ThemeOption {
   promptFragment: string;
   /** Noun used when building a mock/fallback title, e.g. "Little Star". */
   titleNoun: string;
-  /** Gradient palette used for mock illustrations and UI accents. */
+  /** Gradient palette used for demo-mode illustration scenes and UI accents. */
   palette: [string, string];
 }
 
@@ -47,8 +47,15 @@ export interface StoryPageContent {
 export interface StoryTextResponse {
   title: string;
   settingDescription: string;
-  characterDescription: string;
   pages: StoryPageContent[];
+  mode: GenerationMode;
+  warning?: string;
+}
+
+/** The child's photo turned into a single, reusable cartoon character reference image. */
+export interface CharacterReferenceResponse {
+  imageUrl: string;
+  description: string;
   mode: GenerationMode;
   warning?: string;
 }
@@ -70,6 +77,11 @@ export interface StoryPage extends StoryPageContent {
 export interface Story {
   title: string;
   input: StoryInput;
+  /** The single reference image every page/cover illustration is generated from (image-to-image). */
+  characterReferenceImageUrl?: string;
+  characterReferenceStatus: AssetStatus;
+  characterReferenceError?: string;
+  /** Short text description of the character's appearance, kept as a fallback/reinforcement alongside the reference image. */
   characterDescription: string;
   settingDescription: string;
   coverImageUrl?: string;
