@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/storybook/SKILL.md",
       "computedHash": "cd915223b409a385fd9a41965b2835c2244d256801fe3d401764fd21f75c8e31"
+    },
+    "storybook-setup": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "skillPath": "foundation/storybook-setup/SKILL.md",
+      "computedHash": "fafd159d7a60ca872eddd2d5561cfedefa509cecfaeb87ad1a24fa3dc64afc59"
     }
   }
 }
