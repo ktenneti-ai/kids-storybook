@@ -84,6 +84,19 @@ export function buildConsistencyPrompt(illustrationStyle: string): string {
 }
 
 /**
+ * Reusable "vividness" clause — the calibration bar every illustration
+ * prompt is held to. Modeled on a hand-written reference prompt that named
+ * exact hues for every element, gave the scene a clear internal light
+ * source, filled the frame with rich (sometimes fantastical) detail, and
+ * described the composition in terms of movement and feeling rather than a
+ * static layout. Kept theme/style-agnostic so it applies to every page
+ * regardless of what world or art style is selected.
+ */
+function buildVividnessPrompt(): string {
+  return "Name specific, evocative colors for every element — the exact hues of the sky, the ground, the light, and every creature or object in view — rather than generic words like 'colorful' or 'bright'. Give the scene one clear light source and let a soft glow seem to emanate from within key elements (a lantern, a creature, the sky itself). Fill the environment with rich, layered, sometimes gently fantastical detail — oversized or unusual plants, drifting motes of light, layered clouds, textured terrain — so no part of the frame reads as flat or empty. Compose with a sense of movement and feeling — sweeping, floating, leaning into the action — so the illustration feels alive rather than a static pose.";
+}
+
+/**
  * Prompt for one interior storybook page, generated via image-to-image from
  * the character reference. Asks for a cinematic, fully-art-directed picture-
  * book page — a real environment with depth and lighting, not a sketch or an
@@ -98,15 +111,14 @@ export function buildStoryImagePrompt(params: {
   storyPageText: string;
 }): string {
   return [
-    "Using the exact character shown in the reference image, illustrate this children's storybook page as a rich, cinematic full-page scene — the quality of a page from a premium published picture book, not a simple sketch, icon, or vector illustration.",
+    "Using the exact character shown in the reference image, illustrate this children's storybook page as a rich, luminous full-page scene — the quality of a page from a premium published picture book, not a simple sketch, icon, or vector illustration.",
     `Character reference notes (for extra guidance alongside the reference image): ${params.characterDescription}.`,
-    `Consistent world: ${params.settingDescription}.`,
-    `The story text this illustration must visually match: "${params.storyPageText}"`,
-    `Scene to draw: ${params.sceneDescription}.`,
-    "Build a fully realized environment with meaningful background detail, relevant props and secondary characters or creatures where the story calls for them, dynamic and directional lighting with real shadow, and a clear sense of depth across foreground, midground, and background. Never an empty, flat, generic, or placeholder background.",
+    `World: ${params.settingDescription}.`,
+    `This page's moment, which must visually match the story text "${params.storyPageText}": ${params.sceneDescription}.`,
+    buildVividnessPrompt(),
     "The character must be clearly present and actively performing the described action, with an expressive pose and face that matches the story's mood.",
     buildConsistencyPrompt(params.illustrationStyle),
-    "No text, letters, words, numbers, speech bubbles, or logos anywhere in the image. No watermarks or borders. Bright, warm, wholesome, and appropriate for young children. Single cohesive illustration that visually tells this exact moment of the story.",
+    "No text, letters, words, numbers, speech bubbles, or logos anywhere in the image. No watermarks or borders. Warm and wholesome, appropriate for young children. Single cohesive illustration that visually tells this exact moment of the story.",
   ].join(" ");
 }
 
@@ -122,10 +134,11 @@ export function buildCoverImagePrompt(params: {
   return [
     `Using the exact character shown in the reference image, illustrate a storybook COVER for a book titled "${params.title}", set in ${theme.promptFragment}.`,
     `Character reference notes (for extra guidance alongside the reference image): ${params.characterDescription}.`,
-    `Consistent world: ${params.settingDescription}.`,
-    "This is a striking, cinematic, inviting hero cover image with the character front and center, full of warmth and a sense of adventure — a fully realized environment with depth, lighting, and atmosphere, never a flat or empty backdrop.",
+    `World: ${params.settingDescription}.`,
+    "This is a striking, inviting hero cover image with the character front and center, full of warmth and a sense of adventure.",
+    buildVividnessPrompt(),
     buildConsistencyPrompt(params.illustrationStyle),
-    "No text, letters, words, numbers, or logos anywhere in the image — the title will be added separately outside the illustration. No watermarks. Bright, warm, wholesome, and appropriate for young children.",
+    "No text, letters, words, numbers, or logos anywhere in the image — the title will be added separately outside the illustration. No watermarks.",
   ].join(" ");
 }
 
