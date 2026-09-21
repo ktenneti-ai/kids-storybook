@@ -4,8 +4,12 @@ import { CreateWizard } from './CreateWizard';
 
 const meta = {
   component: CreateWizard,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
   args: { onSubmit: fn(), onBack: fn() },
+  parameters: {
+    layout: 'fullscreen',
+    docs: { description: { component: "3-step wizard collecting the child's name, gender, age, theme, story length, and illustration style." } },
+  },
 } satisfies Meta<typeof CreateWizard>;
 
 export default meta;

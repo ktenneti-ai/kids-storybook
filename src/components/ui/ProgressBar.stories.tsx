@@ -4,7 +4,11 @@ import { ProgressBar } from './ProgressBar';
 
 const meta = {
   component: ProgressBar,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
+  parameters: {
+    layout: 'centered',
+    docs: { description: { component: 'Progress bar shown above the reader while the cover and every page are being illustrated.' } },
+  },
 } satisfies Meta<typeof ProgressBar>;
 
 export default meta;

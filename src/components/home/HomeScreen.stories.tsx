@@ -4,8 +4,12 @@ import { HomeScreen } from './HomeScreen';
 
 const meta = {
   component: HomeScreen,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
   args: { onStart: fn() },
+  parameters: {
+    layout: 'fullscreen',
+    docs: { description: { component: 'Landing page introducing StoryStars and starting the story-creation wizard.' } },
+  },
 } satisfies Meta<typeof HomeScreen>;
 
 export default meta;

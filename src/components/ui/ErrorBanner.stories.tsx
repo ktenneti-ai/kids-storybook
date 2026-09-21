@@ -4,7 +4,11 @@ import { ErrorBanner } from './ErrorBanner';
 
 const meta = {
   component: ErrorBanner,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
+  parameters: {
+    layout: 'padded',
+    docs: { description: { component: 'Inline error banner with an optional action button, e.g. Retry, used for pipeline errors.' } },
+  },
 } satisfies Meta<typeof ErrorBanner>;
 
 export default meta;

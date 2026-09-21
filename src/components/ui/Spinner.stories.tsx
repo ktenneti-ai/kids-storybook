@@ -4,7 +4,11 @@ import { Spinner } from './Spinner';
 
 const meta = {
   component: Spinner,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
+  parameters: {
+    layout: 'centered',
+    docs: { description: { component: 'Loading spinner used while a story, character, or illustration is generating.' } },
+  },
 } satisfies Meta<typeof Spinner>;
 
 export default meta;

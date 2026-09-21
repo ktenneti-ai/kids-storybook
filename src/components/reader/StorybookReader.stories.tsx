@@ -66,8 +66,12 @@ function mockPipeline(overrides: Partial<ReturnType<typeof useStoryPipeline>> = 
 
 const meta = {
   component: StorybookReader,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
   args: { onNewStory: fn(), onHome: fn() },
+  parameters: {
+    layout: 'fullscreen',
+    docs: { description: { component: 'The illustrated storybook reader: cover/page navigation, read-aloud, and regenerate controls.' } },
+  },
 } satisfies Meta<typeof StorybookReader>;
 
 export default meta;

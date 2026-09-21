@@ -4,7 +4,11 @@ import { Badge } from './Badge';
 
 const meta = {
   component: Badge,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
+  parameters: {
+    layout: 'centered',
+    docs: { description: { component: 'Small pill badge used for theme, demo-mode, and status labels in the reader header.' } },
+  },
 } satisfies Meta<typeof Badge>;
 
 export default meta;

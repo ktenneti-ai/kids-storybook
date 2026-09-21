@@ -7,8 +7,19 @@ const PIXEL =
 
 const meta = {
   component: IllustrationFrame,
-  tags: ['ai-generated'],
+  tags: ['ai-generated', 'autodocs'],
   args: { onRetry: fn(), alt: 'Illustration for page 3' },
+  parameters: {
+    layout: 'centered',
+    docs: { description: { component: 'Loading/ready/error states for one illustration, with the story text overlaid as a bottom gradient scrim.' } },
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof IllustrationFrame>;
 
 export default meta;

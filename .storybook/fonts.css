@@ -1,0 +1,13 @@
+/**
+ * The real app sets --font-geist-sans / --font-baloo via next/font's
+ * generated class on <html> in src/app/layout.tsx. Storybook never renders
+ * that root layout, so without this file every story's `font-sans` /
+ * `font-display` Tailwind utility (see the `@theme inline` block in
+ * src/app/globals.css) silently falls back to the browser default font.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Geist:wght@400;500;600;700&display=swap");
+
+:root {
+  --font-geist-sans: "Geist", ui-sans-serif, sans-serif;
+  --font-baloo: "Baloo 2", ui-sans-serif, sans-serif;
+}
