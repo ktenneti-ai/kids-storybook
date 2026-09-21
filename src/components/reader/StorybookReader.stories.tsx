@@ -51,12 +51,14 @@ function mockPipeline(overrides: Partial<ReturnType<typeof useStoryPipeline>> = 
     canFallbackToMock: false,
     progress: { done: 3, total: 3 },
     preferMock: true,
+    regeneratingPageNumber: null,
     generate: fn(),
     retry: fn(),
     continueInDemoMode: fn(),
     regenerateStory: fn(),
     regenerateCover: fn(),
     regeneratePageImage: fn(),
+    regeneratePageText: fn(),
     reset: fn(),
     ...overrides,
   };
@@ -82,9 +84,9 @@ export const CoverPage: Story = {
 export const NavigateToNextPage: Story = {
   args: { pipeline: mockPipeline() },
   play: async ({ canvas, userEvent }) => {
-    await waitFor(() => expect(canvas.getByRole('button', { name: /next/i })).toBeVisible());
-    await userEvent.click(canvas.getByRole('button', { name: /next/i }));
-    await waitFor(() => expect(canvas.getByText(/page 1 \/ 2/i)).toBeVisible());
+    await waitFor(() => expect(canvas.getByRole('button', { name: /next page/i })).toBeVisible());
+    await userEvent.click(canvas.getByRole('button', { name: /next page/i }));
+    await waitFor(() => expect(canvas.getByText(/page 1 of 2/i)).toBeVisible());
   },
 };
 

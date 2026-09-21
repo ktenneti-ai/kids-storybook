@@ -8,7 +8,7 @@ const PIXEL =
 const meta = {
   component: IllustrationFrame,
   tags: ['ai-generated'],
-  args: { onRegenerate: fn(), alt: 'Illustration for page 3', regenerateLabel: 'Regenerate illustration' },
+  args: { onRetry: fn(), alt: 'Illustration for page 3' },
 } satisfies Meta<typeof IllustrationFrame>;
 
 export default meta;
@@ -43,6 +43,6 @@ export const ErrorState: Story = {
   args: { status: 'error', error: "We couldn't create this illustration right now." },
   play: async ({ canvas, userEvent, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: /try again/i }));
-    await expect(args.onRegenerate).toHaveBeenCalledTimes(1);
+    await expect(args.onRetry).toHaveBeenCalledTimes(1);
   },
 };

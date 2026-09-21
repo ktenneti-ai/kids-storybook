@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { buildCharacterAnalysisPrompt, buildStoryPrompt } from "../prompt";
+import { buildCharacterAnalysisPrompt, buildRegeneratePagePrompt, buildStoryPrompt } from "../prompt";
 import type { AgeRangeId, StoryPageContent } from "../types";
 
 const TEXT_MODEL = process.env.ANTHROPIC_TEXT_MODEL || "claude-sonnet-5";
@@ -118,4 +118,42 @@ export async function generateStory(
 
   const payload = extractJsonObject(raw);
   return validateStoryPayload(payload, input.length);
+}
+
+function validateSinglePagePayload(payload: unknown, pageNumber: number): StoryPageContent {
+  const p = payload as Record<string, unknown>;
+  const text = typeof p.text === "string" ? p.text.trim() : "";
+  const illustrationPrompt = typeof p.illustrationPrompt === "string" ? p.illustrationPrompt.trim() : "";
+  if (!text || !illustrationPrompt) {
+    throw new Error("The AI response was missing page text or an illustration prompt.");
+  }
+  return { pageNumber, text, illustrationPrompt };
+}
+
+/** Rewrites a single page's text (and its matching illustration prompt), keeping the rest of the story unchanged. */
+export async function regeneratePageText(input: {
+  childName: string;
+  age: AgeRangeId;
+  theme: string;
+  title: string;
+  settingDescription: string;
+  pages: StoryPageContent[];
+  pageNumber: number;
+}): Promise<StoryPageContent> {
+  const anthropic = getClient();
+  if (!anthropic) throw new Error("Text provider is not configured.");
+
+  const response = await anthropic.messages.create({
+    model: TEXT_MODEL,
+    max_tokens: 600,
+    messages: [{ role: "user", content: buildRegeneratePagePrompt(input) }],
+  });
+
+  const raw = response.content
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("\n")
+    .trim();
+
+  const payload = extractJsonObject(raw);
+  return validateSinglePagePayload(payload, input.pageNumber);
 }

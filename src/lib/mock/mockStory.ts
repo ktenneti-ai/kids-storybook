@@ -1,6 +1,6 @@
 import { findTheme } from "../constants";
 import type { AgeRangeId, StoryPageContent, StoryTextResponse } from "../types";
-import { hashString, mulberry32 } from "./random";
+import { hashString, mulberry32, pick } from "./random";
 
 interface ThemePack {
   openingLocation: string;
@@ -165,6 +165,33 @@ function buildRoles(length: number): string[] {
   return ["opening", "companion", ...Array(risingCount).fill("rising"), "challenge", "climax", "resolution", "ending"];
 }
 
+/** Renders one page's text for a given narrative role, using `rng` for any within-role variety (opening phrasing, which "wonder" line, etc). */
+function renderPageText(role: string, pack: ThemePack, name: string, rng: () => number): string {
+  switch (role) {
+    case "opening":
+      return Math.floor(rng() * 2) === 0
+        ? `${name} could hardly wait — tonight, ${fill(pack.openingLocation, name)}.`
+        : `The moment ${name} looked outside, ${fill(pack.openingLocation, name)}, and a big smile appeared.`;
+    case "companion":
+      return fill(pack.companionIntro, name);
+    case "rising":
+      return fill(pick(rng, pack.wonders), name);
+    case "challenge":
+      return `Suddenly, ${fill(pack.challenge, name)}`;
+    case "climax":
+      return `${name} took a deep breath and ${fill(pack.turningPoint, name)}.`;
+    case "resolution":
+      return fill(pack.resolutionScene, name);
+    case "ending":
+    default:
+      return `From that day on, ${name} remembered that ${fill(pack.lesson, name)}. The End.`;
+  }
+}
+
+function toIllustrationPrompt(text: string): string {
+  return text.replace(/^Suddenly, /, "").replace(/ The End\.$/, "");
+}
+
 export function generateMockStoryText(
   input: { childName: string; age: AgeRangeId; theme: string; length: number },
   variationSeed = 0
@@ -174,47 +201,10 @@ export function generateMockStoryText(
   const name = input.childName;
   const rng = mulberry32(hashString(`${name}|${theme.id}|${input.age}|${variationSeed}`));
 
-  const openingVariant = Math.floor(rng() * 2);
-  const wondersStart = Math.floor(rng() * pack.wonders.length);
-
   const roles = buildRoles(input.length);
-  let wonderIndex = 0;
-
   const pages: StoryPageContent[] = roles.map((role, idx) => {
-    let text: string;
-    switch (role) {
-      case "opening":
-        text =
-          openingVariant === 0
-            ? `${name} could hardly wait — tonight, ${fill(pack.openingLocation, name)}.`
-            : `The moment ${name} looked outside, ${fill(pack.openingLocation, name)}, and a big smile appeared.`;
-        break;
-      case "companion":
-        text = fill(pack.companionIntro, name);
-        break;
-      case "rising":
-        text = fill(pack.wonders[(wondersStart + wonderIndex) % pack.wonders.length], name);
-        wonderIndex += 1;
-        break;
-      case "challenge":
-        text = `Suddenly, ${fill(pack.challenge, name)}`;
-        break;
-      case "climax":
-        text = `${name} took a deep breath and ${fill(pack.turningPoint, name)}.`;
-        break;
-      case "resolution":
-        text = fill(pack.resolutionScene, name);
-        break;
-      case "ending":
-      default:
-        text = `From that day on, ${name} remembered that ${fill(pack.lesson, name)}. The End.`;
-        break;
-    }
-    return {
-      pageNumber: idx + 1,
-      text,
-      illustrationPrompt: text.replace(/^Suddenly, /, "").replace(/ The End\.$/, ""),
-    };
+    const text = renderPageText(role, pack, name, rng);
+    return { pageNumber: idx + 1, text, illustrationPrompt: toIllustrationPrompt(text) };
   });
 
   return {
@@ -223,4 +213,19 @@ export function generateMockStoryText(
     pages,
     mode: "mock",
   };
+}
+
+/** Rewrites a single page's text (keeping its narrative role fixed) without touching the rest of the demo story. */
+export function regenerateMockPageText(
+  input: { childName: string; age: AgeRangeId; theme: string; length: number },
+  pageNumber: number,
+  variationSeed = Date.now()
+): StoryPageContent {
+  const theme = findTheme(input.theme);
+  const pack = THEME_PACKS[theme.id] ?? THEME_PACKS["space-adventure"];
+  const roles = buildRoles(input.length);
+  const role = roles[pageNumber - 1] ?? "rising";
+  const rng = mulberry32(hashString(`${input.childName}|${theme.id}|page${pageNumber}|${variationSeed}`));
+  const text = renderPageText(role, pack, input.childName, rng);
+  return { pageNumber, text, illustrationPrompt: toIllustrationPrompt(text) };
 }

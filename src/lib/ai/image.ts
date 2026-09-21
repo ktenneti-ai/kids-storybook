@@ -81,6 +81,7 @@ export async function editImageWithReference(
 /** Illustrates the book cover via image-to-image from the character reference image. */
 export async function generateCover(params: {
   characterReferenceImageUrl: string;
+  characterDescription: string;
   title: string;
   themeId: string;
   illustrationStyle: string;
@@ -88,6 +89,7 @@ export async function generateCover(params: {
 }): Promise<string> {
   const prompt = buildCoverImagePrompt({
     illustrationStyle: params.illustrationStyle,
+    characterDescription: params.characterDescription,
     settingDescription: params.settingDescription,
     themeId: params.themeId,
     title: params.title,
@@ -98,14 +100,18 @@ export async function generateCover(params: {
 /** Illustrates one interior storybook page via image-to-image from the character reference image. */
 export async function generateStoryImage(params: {
   characterReferenceImageUrl: string;
+  characterDescription: string;
   sceneDescription: string;
+  storyPageText: string;
   settingDescription: string;
   illustrationStyle: string;
 }): Promise<string> {
   const prompt = buildStoryImagePrompt({
     illustrationStyle: params.illustrationStyle,
+    characterDescription: params.characterDescription,
     settingDescription: params.settingDescription,
     sceneDescription: params.sceneDescription,
+    storyPageText: params.storyPageText,
   });
   return editImageWithReference(params.characterReferenceImageUrl, prompt, "1024x1024");
 }

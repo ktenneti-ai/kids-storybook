@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ApiErrorResponse, CharacterReferenceResponse, IllustrationResponse, Story, StoryInput, StoryTextResponse } from "@/lib/types";
+import type {
+  ApiErrorResponse,
+  CharacterReferenceResponse,
+  IllustrationResponse,
+  RegeneratePageResponse,
+  Story,
+  StoryInput,
+  StoryTextResponse,
+} from "@/lib/types";
 
 export type PipelinePhase = "idle" | "creating-character" | "writing" | "illustrating" | "ready" | "error";
 
@@ -9,6 +17,7 @@ interface IllustrationTarget {
   kind: "cover" | "page";
   pageNumber?: number;
   sceneDescription?: string;
+  pageText?: string;
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; error: string; canFallbackToMock: boolean }> {
@@ -37,6 +46,7 @@ export function useStoryPipeline() {
   const [canFallbackToMock, setCanFallbackToMock] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [preferMock, setPreferMock] = useState(false);
+  const [regeneratingPageNumber, setRegeneratingPageNumber] = useState<number | null>(null);
 
   const storyRef = useRef<Story | null>(null);
   const lastInputRef = useRef<StoryInput | null>(null);
@@ -48,8 +58,10 @@ export function useStoryPipeline() {
     return postJson<IllustrationResponse>("/api/illustration", {
       illustrationStyle: s.input.illustrationStyle,
       characterReferenceImageUrl: s.characterReferenceImageUrl,
+      characterDescription: s.characterDescription,
       settingDescription: s.settingDescription,
       sceneDescription: target.kind === "page" ? target.sceneDescription : undefined,
+      storyPageText: target.kind === "page" ? target.pageText : undefined,
       title: target.kind === "cover" ? s.title : undefined,
       themeId: s.input.theme,
       childName: s.input.childName,
@@ -78,7 +90,12 @@ export function useStoryPipeline() {
       for (const page of s.pages) {
         setCurrentTask(`Illustrating page ${page.pageNumber} of ${s.pages.length}…`);
         const seed = Date.now() + Math.floor(Math.random() * 10_000);
-        const result = await fetchIllustration(s, { kind: "page", pageNumber: page.pageNumber, sceneDescription: page.illustrationPrompt }, seed, forceMock);
+        const result = await fetchIllustration(
+          s,
+          { kind: "page", pageNumber: page.pageNumber, sceneDescription: page.illustrationPrompt, pageText: page.text },
+          seed,
+          forceMock
+        );
         setStory((prev) => {
           if (!prev) return prev;
           return {
@@ -225,7 +242,12 @@ export function useStoryPipeline() {
           : prev
       );
       const seed = Date.now() + Math.floor(Math.random() * 10_000);
-      const result = await fetchIllustration(s, { kind: "page", pageNumber, sceneDescription: page.illustrationPrompt }, seed, s.mode === "mock" || preferMock);
+      const result = await fetchIllustration(
+        s,
+        { kind: "page", pageNumber, sceneDescription: page.illustrationPrompt, pageText: page.text },
+        seed,
+        s.mode === "mock" || preferMock
+      );
       setStory((prev) => {
         if (!prev) return prev;
         return {
@@ -243,6 +265,66 @@ export function useStoryPipeline() {
     [fetchIllustration, preferMock]
   );
 
+  const regeneratePageText = useCallback(
+    async (pageNumber: number) => {
+      const s = storyRef.current;
+      const input = lastInputRef.current;
+      if (!s || !input) return;
+      setRegeneratingPageNumber(pageNumber);
+      setError(null);
+
+      const result = await postJson<RegeneratePageResponse>("/api/story/page", {
+        childName: input.childName,
+        age: input.age,
+        theme: input.theme,
+        length: input.length,
+        title: s.title,
+        settingDescription: s.settingDescription,
+        pages: s.pages.map((p) => ({ pageNumber: p.pageNumber, text: p.text, illustrationPrompt: p.illustrationPrompt })),
+        pageNumber,
+        forceMock: s.mode === "mock" || preferMock,
+      });
+
+      if (!result.ok) {
+        setError(result.error);
+        setCanFallbackToMock(result.canFallbackToMock);
+        setRegeneratingPageNumber(null);
+        return;
+      }
+
+      const { text, illustrationPrompt } = result.data.page;
+      setStory((prev) =>
+        prev
+          ? {
+              ...prev,
+              pages: prev.pages.map((p) => (p.pageNumber === pageNumber ? { ...p, text, illustrationPrompt, imageStatus: "loading", imageError: undefined } : p)),
+            }
+          : prev
+      );
+
+      const sNow = storyRef.current;
+      if (sNow) {
+        const seed = Date.now() + Math.floor(Math.random() * 10_000);
+        const imgResult = await fetchIllustration(sNow, { kind: "page", pageNumber, sceneDescription: illustrationPrompt, pageText: text }, seed, sNow.mode === "mock" || preferMock);
+        setStory((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pages: prev.pages.map((p) =>
+              p.pageNumber === pageNumber
+                ? imgResult.ok
+                  ? { ...p, imageStatus: "ready" as const, imageUrl: imgResult.data.imageUrl, imageError: undefined }
+                  : { ...p, imageStatus: "error" as const, imageError: imgResult.error }
+                : p
+            ),
+          };
+        });
+      }
+      setRegeneratingPageNumber(null);
+    },
+    [fetchIllustration, preferMock]
+  );
+
   const reset = useCallback(() => {
     setStory(null);
     setPhase("idle");
@@ -251,6 +333,7 @@ export function useStoryPipeline() {
     setCanFallbackToMock(false);
     setProgress({ done: 0, total: 0 });
     setPreferMock(false);
+    setRegeneratingPageNumber(null);
     lastInputRef.current = null;
   }, []);
 
@@ -262,12 +345,14 @@ export function useStoryPipeline() {
     canFallbackToMock,
     progress,
     preferMock,
+    regeneratingPageNumber,
     generate,
     retry,
     continueInDemoMode,
     regenerateStory,
     regenerateCover,
     regeneratePageImage,
+    regeneratePageText,
     reset,
   };
 }

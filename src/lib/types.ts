@@ -66,6 +66,13 @@ export interface IllustrationResponse {
   warning?: string;
 }
 
+/** Result of rewriting a single page's text (and matching illustration prompt) while leaving the rest of the book unchanged. */
+export interface RegeneratePageResponse {
+  page: StoryPageContent;
+  mode: GenerationMode;
+  warning?: string;
+}
+
 export type AssetStatus = "idle" | "loading" | "ready" | "error";
 
 export interface StoryPage extends StoryPageContent {

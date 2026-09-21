@@ -1,5 +1,5 @@
 import { findAge, findStyle, findTheme } from "./constants";
-import type { AgeRangeId } from "./types";
+import type { AgeRangeId, StoryPageContent } from "./types";
 
 /**
  * Builds the user prompt sent to the text-generation model to produce the
@@ -82,38 +82,89 @@ export function buildCharacterReferencePrompt(params: {
   return base.join(" ");
 }
 
-/** Prompt for one interior storybook page, generated via image-to-image from the character reference. */
+/**
+ * Reusable clause enforcing visual identity + style consistency with the
+ * character reference image. Threaded into every cover/page prompt so the
+ * "consistency" instruction is defined once and never drifts between call
+ * sites.
+ */
+export function buildConsistencyPrompt(illustrationStyle: string): string {
+  const style = findStyle(illustrationStyle);
+  return `Consistency requirement: the character's face shape, hairstyle, hair color, skin tone, eye color, outfit, and body proportions must look EXACTLY like the attached reference image — this is the same character appearing in a new scene, not a different-looking child. Render in a consistent ${style.label.toLowerCase()} style (${style.promptFragment}) matching the reference image's rendering style across every illustration in this book.`;
+}
+
+/**
+ * Prompt for one interior storybook page, generated via image-to-image from
+ * the character reference. Asks for a cinematic, fully-art-directed picture-
+ * book page — a real environment with depth and lighting, not a sketch or an
+ * empty backdrop — and grounds the scene in the page's actual story text so
+ * the artwork visually matches what's happening, not just a loose paraphrase.
+ */
 export function buildStoryImagePrompt(params: {
   illustrationStyle: string;
+  characterDescription: string;
   settingDescription: string;
   sceneDescription: string;
+  storyPageText: string;
 }): string {
-  const style = findStyle(params.illustrationStyle);
   return [
-    "Using the exact character shown in the reference image, illustrate this children's storybook page as a full-page scene.",
-    `${style.promptFragment}.`,
+    "Using the exact character shown in the reference image, illustrate this children's storybook page as a rich, cinematic full-page scene — the quality of a page from a premium published picture book, not a simple sketch, icon, or vector illustration.",
+    `Character reference notes (for when the photo/reference is ambiguous): ${params.characterDescription}.`,
     `Consistent world: ${params.settingDescription}.`,
-    `Scene: ${params.sceneDescription}.`,
-    "Keep the character's face, hairstyle, skin tone, outfit, and proportions identical to the reference image. The character must be clearly present and actively performing the described action — this is a full illustrated scene that visually tells the story, not a portrait and not a generic background.",
-    "No text, letters, words, numbers, speech bubbles, or logos anywhere in the image. No watermarks or borders. Bright, warm, wholesome, and appropriate for young children. Single cohesive illustration.",
+    `The story text this illustration must visually match: "${params.storyPageText}"`,
+    `Scene to draw: ${params.sceneDescription}.`,
+    "Build a fully realized environment with meaningful background detail, relevant props and secondary characters or creatures where the story calls for them, dynamic and directional lighting with real shadow, and a clear sense of depth across foreground, midground, and background. Never an empty, flat, generic, or placeholder background.",
+    "The character must be clearly present and actively performing the described action, with an expressive pose and face that matches the story's mood.",
+    buildConsistencyPrompt(params.illustrationStyle),
+    "No text, letters, words, numbers, speech bubbles, or logos anywhere in the image. No watermarks or borders. Bright, warm, wholesome, and appropriate for young children. Single cohesive illustration that visually tells this exact moment of the story.",
   ].join(" ");
 }
 
 /** Prompt for the book cover, generated via image-to-image from the character reference. */
 export function buildCoverImagePrompt(params: {
   illustrationStyle: string;
+  characterDescription: string;
   settingDescription: string;
   themeId: string;
   title: string;
 }): string {
-  const style = findStyle(params.illustrationStyle);
   const theme = findTheme(params.themeId);
   return [
     `Using the exact character shown in the reference image, illustrate a storybook COVER for a book titled "${params.title}", set in ${theme.promptFragment}.`,
-    `${style.promptFragment}.`,
+    `Character reference notes (for when the photo/reference is ambiguous): ${params.characterDescription}.`,
     `Consistent world: ${params.settingDescription}.`,
-    "This is a striking, inviting hero cover image with the character front and center, full of warmth and a sense of adventure.",
-    "Keep the character's face, hairstyle, skin tone, outfit, and proportions identical to the reference image.",
+    "This is a striking, cinematic, inviting hero cover image with the character front and center, full of warmth and a sense of adventure — a fully realized environment with depth, lighting, and atmosphere, never a flat or empty backdrop.",
+    buildConsistencyPrompt(params.illustrationStyle),
     "No text, letters, words, numbers, or logos anywhere in the image — the title will be added separately outside the illustration. No watermarks. Bright, warm, wholesome, and appropriate for young children.",
   ].join(" ");
+}
+
+/**
+ * Prompt for regenerating a single page's text while keeping the rest of the
+ * book unchanged. The model sees the full current story so the rewritten
+ * page still fits naturally between its neighbors.
+ */
+export function buildRegeneratePagePrompt(params: {
+  childName: string;
+  age: AgeRangeId;
+  theme: string;
+  title: string;
+  settingDescription: string;
+  pages: StoryPageContent[];
+  pageNumber: number;
+}): string {
+  const age = findAge(params.age);
+  const theme = findTheme(params.theme);
+  const context = params.pages.map((p) => `Page ${p.pageNumber}: ${p.text}`).join("\n");
+
+  return `You are revising ONE page of an existing original children's book titled "${params.title}" starring ${params.childName}. Reader age range: ${age.label}. Theme: ${theme.label}. World/setting: ${params.settingDescription}
+
+FULL CURRENT STORY (for context — every page except the one requested must stay exactly as it is; do not summarize or rewrite the others):
+${context}
+
+Rewrite ONLY page ${params.pageNumber}. It must still fit naturally between the pages immediately before and after it and must not contradict anything in the rest of the story. Produce a genuinely fresh alternative — different specific details, actions, and wording than the current page ${params.pageNumber} — while keeping a similar length (2-4 short sentences) and the same warm, age-appropriate tone as the rest of the book.
+
+Respond with ONLY valid JSON and nothing else — no markdown code fences, no commentary:
+{ "text": string, "illustrationPrompt": string }
+"illustrationPrompt" is one vivid, detailed sentence describing exactly what ${params.childName} is doing on this page — action, pose, expression, immediate surroundings — for an illustrator. Do NOT describe ${params.childName}'s physical appearance in it (hair, face, clothing) — that is fixed separately by a character reference image.`;
 }

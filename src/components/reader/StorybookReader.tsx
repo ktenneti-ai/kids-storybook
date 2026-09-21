@@ -25,11 +25,13 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
     error,
     canFallbackToMock,
     progress,
+    regeneratingPageNumber,
     retry,
     continueInDemoMode,
     regenerateStory,
     regenerateCover,
     regeneratePageImage,
+    regeneratePageText,
   } = pipeline;
   const [pageIndex, setPageIndex] = useState(0);
   const readAloud = useReadAloud();
@@ -88,19 +90,25 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
   const currentPage = isCoverView ? null : story.pages[pageIndex - 1];
   const isLastPage = pageIndex === total;
   const isIllustrating = phase === "illustrating";
+  const isImageBusy = isCoverView ? story.coverStatus === "loading" : currentPage!.imageStatus === "loading";
+  const isPageTextBusy = !isCoverView && regeneratingPageNumber === currentPage!.pageNumber;
 
-  const handleReadAloud = () => {
-    if (readAloud.isSpeaking) {
-      readAloud.stop();
-      return;
+  const handleReadAloudToggle = () => {
+    if (!readAloud.isSpeaking) {
+      const text = isCoverView ? `${story.title}. A story about ${story.input.childName}.` : currentPage!.text;
+      readAloud.speak(text);
+    } else if (readAloud.isPaused) {
+      readAloud.resume();
+    } else {
+      readAloud.pause();
     }
-    const text = isCoverView ? `${story.title}. A story about ${story.input.childName}.` : currentPage!.text;
-    readAloud.speak(text);
   };
+
+  const readAloudLabel = !readAloud.isSpeaking ? "🔊 Read Aloud" : readAloud.isPaused ? "▶ Resume" : "⏸ Pause";
 
   return (
     <main className="flex-1 bg-linear-to-b from-violet-50 via-fuchsia-50 to-orange-50 px-4 py-8 sm:py-12">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-2xl">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {story.characterReferenceImageUrl ? (
@@ -143,20 +151,20 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
           </div>
         ) : null}
 
-        <div className="animate-pop-in rounded-3xl bg-white p-5 shadow-xl shadow-violet-200/50 sm:p-8">
+        {/* Edge-to-edge illustration card — the artwork is the dominant element, text is laid directly onto it. */}
+        <div className="animate-pop-in relative overflow-hidden rounded-3xl shadow-2xl shadow-violet-300/40">
           {isCoverView ? (
             <IllustrationFrame
               status={story.coverStatus}
               imageUrl={story.coverImageUrl}
               error={story.coverError}
               alt={`Cover illustration for ${story.title}`}
-              aspect="portrait"
-              onRegenerate={regenerateCover}
-              regenerateLabel="Regenerate cover"
+              aspect="cover"
+              onRetry={regenerateCover}
               overlay={
                 <div className="text-center">
-                  <h1 className="font-display text-3xl font-extrabold text-white drop-shadow-sm sm:text-4xl">{story.title}</h1>
-                  <p className="mt-2 text-sm font-medium text-white/80">A StoryStars original &middot; starring {story.input.childName}</p>
+                  <h1 className="font-display text-3xl font-extrabold text-white drop-shadow-sm sm:text-5xl">{story.title}</h1>
+                  <p className="mt-3 text-sm font-medium text-white/80 sm:text-base">A StoryStars original &middot; starring {story.input.childName}</p>
                 </div>
               }
             />
@@ -166,44 +174,86 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
               imageUrl={currentPage!.imageUrl}
               error={currentPage!.imageError}
               alt={`Illustration for page ${currentPage!.pageNumber}`}
-              onRegenerate={() => regeneratePageImage(currentPage!.pageNumber)}
-              regenerateLabel="Regenerate illustration"
+              aspect="page"
+              onRetry={() => regeneratePageImage(currentPage!.pageNumber)}
               overlay={
                 <div className="text-center">
-                  <p className="font-display text-lg leading-relaxed text-white drop-shadow-sm sm:text-xl">{currentPage!.text}</p>
-                  {isLastPage ? <p className="mt-2 text-sm font-bold uppercase tracking-widest text-white/90">🎉 The End 🎉</p> : null}
+                  <p className="font-display text-xl leading-relaxed text-white drop-shadow-sm sm:text-2xl">{currentPage!.text}</p>
+                  {isLastPage ? <p className="mt-3 text-sm font-bold uppercase tracking-widest text-white/90">🎉 The End 🎉</p> : null}
                 </div>
               }
             />
           )}
 
-          <div className="mt-6 flex items-center justify-between gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={pageIndex === 0}>
-              ← Previous
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleReadAloud}
-                disabled={!readAloud.isSupported}
-                title={readAloud.isSupported ? "Read this page aloud" : "Read aloud isn't supported in this browser"}
-                className="flex items-center gap-1.5 rounded-full border-2 border-violet-200 px-3 py-1.5 text-sm font-semibold text-violet-700 transition hover:border-violet-300 disabled:opacity-40"
-              >
-                {readAloud.isSpeaking ? "⏹ Stop" : "🔊 Read Aloud"}
-              </button>
-              <span className="text-xs font-medium text-violet-400">
-                {isCoverView ? "Cover" : `Page ${pageIndex} / ${total}`}
-              </span>
-            </div>
-
-            <Button variant="secondary" size="sm" onClick={() => setPageIndex((p) => Math.min(total, p + 1))} disabled={pageIndex === total}>
-              Next →
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+            disabled={pageIndex === 0}
+            aria-label="Previous page"
+            className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-2xl font-bold text-violet-700 shadow-lg backdrop-blur-sm transition hover:bg-white disabled:pointer-events-none disabled:opacity-0 sm:h-14 sm:w-14"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => setPageIndex((p) => Math.min(total, p + 1))}
+            disabled={pageIndex === total}
+            aria-label="Next page"
+            className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-2xl font-bold text-violet-700 shadow-lg backdrop-blur-sm transition hover:bg-white disabled:pointer-events-none disabled:opacity-0 sm:h-14 sm:w-14"
+          >
+            ›
+          </button>
         </div>
 
-        <div className="mt-5 flex flex-col items-center gap-2">
+        {/* Page progress dots */}
+        <div className="mt-4 flex flex-col items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {Array.from({ length: total + 1 }, (_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setPageIndex(idx)}
+                aria-label={idx === 0 ? "Go to cover" : `Go to page ${idx}`}
+                aria-current={idx === pageIndex}
+                className={`h-2 rounded-full transition-all ${idx === pageIndex ? "w-6 bg-fuchsia-500" : "w-2 bg-violet-200 hover:bg-violet-300"}`}
+              />
+            ))}
+          </div>
+          <span className="text-xs font-semibold text-violet-500">{isCoverView ? "Cover" : `Page ${pageIndex} of ${total}`}</span>
+        </div>
+
+        {/* Read aloud + regenerate controls */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={handleReadAloudToggle}
+            disabled={!readAloud.isSupported}
+            title={readAloud.isSupported ? "Read this page aloud" : "Read aloud isn't supported in this browser"}
+            className="flex items-center gap-1.5 rounded-full border-2 border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 disabled:opacity-40"
+          >
+            {readAloudLabel}
+          </button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={isCoverView ? regenerateCover : () => regeneratePageImage(currentPage!.pageNumber)}
+            disabled={isImageBusy || isIllustrating}
+            icon={<span aria-hidden>🖼️</span>}
+          >
+            {isCoverView ? "Regenerate Cover Art" : "Regenerate Image"}
+          </Button>
+          {!isCoverView ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => regeneratePageText(currentPage!.pageNumber)}
+              disabled={isPageTextBusy || isIllustrating}
+              loading={isPageTextBusy}
+              icon={<span aria-hidden>📝</span>}
+            >
+              Regenerate Page
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="sm"
@@ -216,9 +266,6 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
           >
             Regenerate Whole Story
           </Button>
-          <p className="max-w-md text-center text-xs text-violet-400">
-            Not quite right? Regenerating the story writes a brand-new version and re-illustrates every page.
-          </p>
         </div>
       </div>
     </main>

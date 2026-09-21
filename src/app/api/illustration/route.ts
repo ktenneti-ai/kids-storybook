@@ -16,8 +16,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<IllustrationR
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
-  const { illustrationStyle, characterReferenceImageUrl, settingDescription, sceneDescription, title, themeId, isCover, forceMock, seed } =
-    validation.value;
+  const {
+    illustrationStyle,
+    characterReferenceImageUrl,
+    characterDescription,
+    settingDescription,
+    sceneDescription,
+    storyPageText,
+    title,
+    themeId,
+    isCover,
+    forceMock,
+    seed,
+  } = validation.value;
   const bodyRecord = body as Record<string, unknown>;
   const childName = typeof bodyRecord.childName === "string" ? bodyRecord.childName : "";
 
@@ -34,8 +45,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<IllustrationR
 
   try {
     const imageUrl = isCover
-      ? await generateCover({ characterReferenceImageUrl, title, themeId, illustrationStyle, settingDescription })
-      : await generateStoryImage({ characterReferenceImageUrl, sceneDescription, settingDescription, illustrationStyle });
+      ? await generateCover({ characterReferenceImageUrl, characterDescription, title, themeId, illustrationStyle, settingDescription })
+      : await generateStoryImage({
+          characterReferenceImageUrl,
+          characterDescription,
+          sceneDescription,
+          storyPageText,
+          settingDescription,
+          illustrationStyle,
+        });
     return NextResponse.json({ imageUrl, mode: "ai" });
   } catch (err) {
     console.error("[api/illustration] generation failed:", err);

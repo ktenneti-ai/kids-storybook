@@ -111,8 +111,10 @@ export function validateCharacterInput(body: unknown): ValidationResult<{
 export function validateIllustrationRequest(body: unknown): ValidationResult<{
   illustrationStyle: string;
   characterReferenceImageUrl: string;
+  characterDescription: string;
   settingDescription: string;
   sceneDescription: string;
+  storyPageText: string;
   title: string;
   themeId: string;
   isCover: boolean;
@@ -138,12 +140,16 @@ export function validateIllustrationRequest(body: unknown): ValidationResult<{
     return { ok: false, error: "Character reference image is too large." };
   }
 
+  const characterDescription = typeof b.characterDescription === "string" ? b.characterDescription.trim() : "";
+  if (!characterDescription) return { ok: false, error: "Missing character description." };
+
   const settingDescription = typeof b.settingDescription === "string" ? b.settingDescription.trim() : "";
   if (!settingDescription) return { ok: false, error: "Missing setting description." };
 
   const isCover = Boolean(b.isCover);
   const title = typeof b.title === "string" ? b.title.trim() : "";
   const sceneDescription = typeof b.sceneDescription === "string" ? b.sceneDescription.trim() : "";
+  const storyPageText = typeof b.storyPageText === "string" ? b.storyPageText.trim() : "";
   if (isCover && !title) return { ok: false, error: "Missing book title for the cover illustration." };
   if (!isCover && !sceneDescription) return { ok: false, error: "Missing scene description." };
 
@@ -153,6 +159,79 @@ export function validateIllustrationRequest(body: unknown): ValidationResult<{
 
   return {
     ok: true,
-    value: { illustrationStyle: illustrationStyle.value, characterReferenceImageUrl, settingDescription, sceneDescription, title, themeId, isCover, forceMock, seed },
+    value: {
+      illustrationStyle: illustrationStyle.value,
+      characterReferenceImageUrl,
+      characterDescription,
+      settingDescription,
+      sceneDescription,
+      storyPageText,
+      title,
+      themeId,
+      isCover,
+      forceMock,
+      seed,
+    },
+  };
+}
+
+/** Rewrites a single page's text while keeping the rest of the book (and its position/role in the story) unchanged. */
+export function validateRegeneratePageInput(body: unknown): ValidationResult<{
+  childName: string;
+  age: AgeRangeId;
+  theme: string;
+  length: number;
+  title: string;
+  settingDescription: string;
+  pages: { pageNumber: number; text: string; illustrationPrompt: string }[];
+  pageNumber: number;
+  forceMock: boolean;
+}> {
+  if (typeof body !== "object" || body === null) {
+    return { ok: false, error: "Request body must be a JSON object." };
+  }
+  const b = body as Record<string, unknown>;
+
+  const childName = validateChildName(b);
+  if (!childName.ok) return childName;
+
+  const age = validateAge(b);
+  if (!age.ok) return age;
+
+  const theme = typeof b.theme === "string" ? b.theme : "";
+  if (!THEMES.some((t) => t.id === theme)) return { ok: false, error: "Please choose a valid story theme." };
+
+  const length = typeof b.length === "number" ? b.length : Number(b.length);
+  if (!STORY_LENGTHS.includes(length as (typeof STORY_LENGTHS)[number])) {
+    return { ok: false, error: "Please choose a valid story length." };
+  }
+
+  const title = typeof b.title === "string" ? b.title.trim() : "";
+  if (!title) return { ok: false, error: "Missing book title." };
+
+  const settingDescription = typeof b.settingDescription === "string" ? b.settingDescription.trim() : "";
+  if (!settingDescription) return { ok: false, error: "Missing setting description." };
+
+  if (!Array.isArray(b.pages)) return { ok: false, error: "Missing story pages." };
+  const pages = b.pages.map((raw) => {
+    const p = raw as Record<string, unknown>;
+    return {
+      pageNumber: typeof p.pageNumber === "number" ? p.pageNumber : NaN,
+      text: typeof p.text === "string" ? p.text : "",
+      illustrationPrompt: typeof p.illustrationPrompt === "string" ? p.illustrationPrompt : "",
+    };
+  });
+  if (pages.length !== length || pages.some((p) => !p.text || !p.illustrationPrompt || Number.isNaN(p.pageNumber))) {
+    return { ok: false, error: "Story pages are malformed." };
+  }
+
+  const pageNumber = typeof b.pageNumber === "number" ? b.pageNumber : Number(b.pageNumber);
+  if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > length) {
+    return { ok: false, error: "Please choose a valid page to regenerate." };
+  }
+
+  return {
+    ok: true,
+    value: { childName: childName.value, age: age.value, theme, length, title, settingDescription, pages, pageNumber, forceMock: b.forceMock === true },
   };
 }

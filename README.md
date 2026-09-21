@@ -10,22 +10,27 @@ story's action, generated via image-to-image from one reference image so they st
 - **Photo → cartoon character** — an uploaded photo is converted into a single reusable cartoon character reference
   image (`createCharacterReference`), preserving face shape, hairstyle, and skin tone while rendering it as a warm
   storybook illustration. With no photo, an original character is generated from a text description instead.
-- **Original story generation** (`generateStory`) — an 8/10/12-page story with a title, a consistent world/setting
-  description, and a detailed action/scene description for every page.
-- **Image-to-image illustration** (`generateCover`, `generateStoryImage`) — every page and the cover are generated
-  via **image-to-image editing from the SAME character reference image** (OpenAI `gpt-image-1`, `input_fidelity:
-  "high"`), not from a text description alone — this is what actually carries the child's identity into each new
-  scene. Every call re-anchors to the one master reference (never chains page → page) so drift doesn't compound
-  across a 10-page book.
-- **Illustrations that tell the story** — each prompt is a specific action/pose/setting for that page, not a
-  generic background; the character must be visibly present and doing the thing the story says.
-- **Interactive reader** — the illustration is the dominant element on every page, cover + Previous/Next navigation,
-  "The End" on the last page.
-- **Read Aloud** — uses the browser's built-in `speechSynthesis` API, no external service required.
-- **Regenerate controls** — regenerate the whole story (new text + new art, same character) or just one illustration
-  (cover or any page) without touching the rest of the book.
+- **Original story generation** (`generateStory`) — an 8/10/12-page story (10 by default) with a title, a consistent
+  world/setting description, and a detailed action/scene description for every page.
+- **Cinematic image-to-image illustration** (`generateCover`, `generateStoryImage`) — every page and the cover are
+  generated via **image-to-image editing from the SAME character reference image** (OpenAI `gpt-image-1`,
+  `input_fidelity: "high"`), not from a text description alone. Each request is built from six explicit inputs —
+  `characterReference` (the image), `characterDescription`, `storyPageText`, `sceneDescription`, `artStyle`, and a
+  shared `consistencyPrompt` (`buildConsistencyPrompt`) — and asks for a fully realized environment with props,
+  secondary characters, directional lighting/shadow, and foreground/midground/background depth, explicitly
+  rejecting flat, empty, or generic backdrops. Every call re-anchors to the one master reference (never chains
+  page → page) so drift doesn't compound across a 10-page book.
+- **Illustrations that tell the story** — each prompt is grounded in that exact page's story text, not just a loose
+  scene paraphrase; the character must be visibly present and doing the thing the story says.
+- **Premium picture-book reader** — large edge-to-edge artwork with the story text laid directly onto the image in a
+  bottom gradient scrim, big circular Previous/Next controls, tappable page-progress dots, and kid-friendly display
+  typography.
+- **Read Aloud** — play/pause/resume via the browser's built-in `speechSynthesis` API, no external service required.
+- **Regenerate controls** — Regenerate Image (just the current illustration), Regenerate Page (rewrites that page's
+  text — keeping the rest of the book and that page's narrative role intact — then re-illustrates it to match), and
+  Regenerate Whole Story (new text + new art, same character).
 - **Staged loading states** — "Creating your character…" → "Writing your adventure…" → "Illustrating page 3 of
-  8…", plus per-image loading/error states with retry and a top-level error screen with "Try Again" / "Continue in
+  10…", plus per-image loading/error states with retry and a top-level error screen with "Try Again" / "Continue in
   Demo Mode".
 - **Demo/offline mode** — if `ANTHROPIC_API_KEY` and/or `OPENAI_API_KEY` are missing, the app renders real
   illustrated scenes offline instead of calling any API: a layered sky/ground/character SVG composition (not a flat
@@ -52,6 +57,7 @@ src/
     page.tsx                    Renders <AppShell />
     api/character/route.ts      POST — createCharacterReference: photo (or text) → cartoon character image
     api/story/route.ts          POST — generateStory: title, setting, and page-by-page text
+    api/story/page/route.ts     POST — regeneratePageText: rewrite one page's text, rest of the book unchanged
     api/illustration/route.ts   POST — generateCover / generateStoryImage: one illustration, image-to-image
   components/
     AppShell.tsx                 Top-level view state machine (home / create / reader)
@@ -82,9 +88,12 @@ UI logic, and prompt construction / mock generation live in their own modules un
 
 1. `createCharacterReference(photo | description)` → one cartoon character reference **image** (not just text),
    generated via `images.edit` (from the photo) or `images.generate` (no photo).
-2. That single image is sent as the input to `images.edit` again for the cover and **every** page, with
-   `input_fidelity: "high"` and a prompt that describes only the new scene/action — never re-describing the
-   character's appearance, since the reference image itself carries that.
+2. That single image is sent as the input to `images.edit` again for the cover and **every** page, built from six
+   explicit inputs: `characterReference` (the image itself), `characterDescription` (text reinforcement),
+   `storyPageText` (what actually happens on this page), `sceneDescription` (the action/pose to draw),
+   `artStyle`, and a shared `consistencyPrompt` — one function (`buildConsistencyPrompt`) reused by every call so
+   the "must match the reference exactly" instruction never drifts between the cover, page, and character-creation
+   prompts.
 3. Every illustration is generated from the *same* master reference (fan-out, not a chain), so inconsistencies from
    one page don't compound into the next.
 4. A short text description (from Claude's vision analysis of the photo, when available) rides along as a
