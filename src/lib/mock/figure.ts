@@ -1,3 +1,4 @@
+import type { CharacterGender } from "../types";
 import { hashString, mulberry32, pick } from "./random";
 
 export interface CharacterLook {
@@ -28,8 +29,8 @@ export function pickCharacterLook(seedKey: string): CharacterLook {
 }
 
 /** A simple, friendly full-body cartoon figure standing at (cx, groundY), used inside demo scene illustrations. */
-export function renderStandingFigure(params: { cx: number; groundY: number; scale: number; look: CharacterLook; poseSeed: number }): string {
-  const { cx, groundY, scale, look, poseSeed } = params;
+export function renderStandingFigure(params: { cx: number; groundY: number; scale: number; look: CharacterLook; gender: CharacterGender; poseSeed: number }): string {
+  const { cx, groundY, scale, look, gender, poseSeed } = params;
   const wave = poseSeed % 2 === 0;
   const strideL = poseSeed % 3 === 0 ? -1 : 1;
 
@@ -41,6 +42,11 @@ export function renderStandingFigure(params: { cx: number; groundY: number; scal
   const bodyW = 58 * scale;
   const hipY = bodyBottom;
   const footY = groundY;
+
+  const longHair =
+    gender === "girl"
+      ? `<path d="M ${cx - headR * 0.95} ${headCy - headR * 0.1} Q ${cx - headR * 1.15} ${headCy + headR * 1.3} ${cx - headR * 0.55} ${headCy + headR * 1.9} L ${cx - headR * 0.2} ${headCy + headR * 1.7} Q ${cx - headR * 0.55} ${headCy + headR * 0.6} ${cx - headR * 0.7} ${headCy} Z" fill="${look.hairColor}" /><path d="M ${cx + headR * 0.95} ${headCy - headR * 0.1} Q ${cx + headR * 1.15} ${headCy + headR * 1.3} ${cx + headR * 0.55} ${headCy + headR * 1.9} L ${cx + headR * 0.2} ${headCy + headR * 1.7} Q ${cx + headR * 0.55} ${headCy + headR * 0.6} ${cx + headR * 0.7} ${headCy} Z" fill="${look.hairColor}" />`
+      : "";
 
   return `
   <g>
@@ -54,6 +60,8 @@ export function renderStandingFigure(params: { cx: number; groundY: number; scal
     <!-- arms -->
     <line x1="${cx - bodyW / 2}" y1="${bodyTop + 18 * scale}" x2="${cx - bodyW / 2 - 34 * scale}" y2="${wave ? bodyTop - 20 * scale : bodyTop + 46 * scale}" stroke="${look.outfitColor}" stroke-width="${14 * scale}" stroke-linecap="round" />
     <line x1="${cx + bodyW / 2}" y1="${bodyTop + 18 * scale}" x2="${cx + bodyW / 2 + 34 * scale}" y2="${wave ? bodyTop + 46 * scale : bodyTop - 20 * scale}" stroke="${look.outfitColor}" stroke-width="${14 * scale}" stroke-linecap="round" />
+    <!-- long hair (behind head), girl only -->
+    ${longHair}
     <!-- head -->
     <circle cx="${cx}" cy="${headCy}" r="${headR}" fill="${look.skinTone}" />
     <!-- hair -->
@@ -66,15 +74,21 @@ export function renderStandingFigure(params: { cx: number; groundY: number; scal
 }
 
 /** A close-up head-and-shoulders bust of the same character, used for the demo character reference portrait. */
-export function renderPortraitFigure(params: { cx: number; cy: number; scale: number; look: CharacterLook }): string {
-  const { cx, cy, scale, look } = params;
+export function renderPortraitFigure(params: { cx: number; cy: number; scale: number; look: CharacterLook; gender: CharacterGender }): string {
+  const { cx, cy, scale, look, gender } = params;
   const headR = 150 * scale;
   const shoulderY = cy + headR * 1.15;
+
+  const longHair =
+    gender === "girl"
+      ? `<path d="M ${cx - headR * 0.95} ${cy - headR * 0.1} Q ${cx - headR * 1.2} ${cy + headR * 1.1} ${cx - headR * 0.5} ${cy + headR * 1.6} L ${cx - headR * 0.15} ${cy + headR * 1.4} Q ${cx - headR * 0.55} ${cy + headR * 0.5} ${cx - headR * 0.7} ${cy} Z" fill="${look.hairColor}" /><path d="M ${cx + headR * 0.95} ${cy - headR * 0.1} Q ${cx + headR * 1.2} ${cy + headR * 1.1} ${cx + headR * 0.5} ${cy + headR * 1.6} L ${cx + headR * 0.15} ${cy + headR * 1.4} Q ${cx + headR * 0.55} ${cy + headR * 0.5} ${cx + headR * 0.7} ${cy} Z" fill="${look.hairColor}" />`
+      : "";
 
   return `
   <g>
     <ellipse cx="${cx}" cy="${shoulderY + 90 * scale}" rx="${220 * scale}" ry="${140 * scale}" fill="${look.outfitColor}" />
     <rect x="${cx - 90 * scale}" y="${shoulderY - 10 * scale}" width="${180 * scale}" height="${40 * scale}" rx="${18 * scale}" fill="${look.outfitAccent}" />
+    ${longHair}
     <circle cx="${cx}" cy="${cy}" r="${headR}" fill="${look.skinTone}" />
     <path d="M ${cx - headR} ${cy - headR * 0.15} Q ${cx} ${cy - headR * 1.7} ${cx + headR} ${cy - headR * 0.15} Q ${cx + headR * 0.65} ${cy - headR * 0.75} ${cx} ${cy - headR * 0.7} Q ${cx - headR * 0.65} ${cy - headR * 0.75} ${cx - headR} ${cy - headR * 0.15} Z" fill="${look.hairColor}" />
     <circle cx="${cx - headR * 0.35}" cy="${cy + headR * 0.05}" r="${headR * 0.09}" fill="#292524" />

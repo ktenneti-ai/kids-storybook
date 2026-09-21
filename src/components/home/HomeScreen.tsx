@@ -47,7 +47,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
 
         <div className="mt-14 grid w-full grid-cols-1 gap-4 text-left sm:grid-cols-3">
           {[
-            { icon: "📝", title: "1. Tell us about them", body: "A name, an optional photo, an age, a theme, and a length." },
+            { icon: "📝", title: "1. Tell us about them", body: "A name, boy or girl, an age, a theme, and a length." },
             { icon: "🪄", title: "2. We write & illustrate", body: "An original story and matching art are generated page by page." },
             { icon: "🔊", title: "3. Read together", body: "Flip through pages, listen with read-aloud, and enjoy!" },
           ].map((step) => (

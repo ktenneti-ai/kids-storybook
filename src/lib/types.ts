@@ -1,5 +1,7 @@
 export type AgeRangeId = "3-5" | "6-8" | "9-12";
 
+export type CharacterGender = "boy" | "girl";
+
 export type GenerationMode = "ai" | "mock";
 
 export interface ThemeOption {
@@ -31,11 +33,11 @@ export interface AgeOption {
 
 export interface StoryInput {
   childName: string;
+  gender: CharacterGender;
   age: AgeRangeId;
   theme: string;
   length: number;
   illustrationStyle: string;
-  photoDataUrl?: string | null;
 }
 
 export interface StoryPageContent {
@@ -52,7 +54,7 @@ export interface StoryTextResponse {
   warning?: string;
 }
 
-/** The child's photo turned into a single, reusable cartoon character reference image. */
+/** A single, reusable cartoon character reference image generated from the child's name, age, and gender. */
 export interface CharacterReferenceResponse {
   imageUrl: string;
   description: string;

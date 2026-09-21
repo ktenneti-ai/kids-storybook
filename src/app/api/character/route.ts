@@ -17,18 +17,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<CharacterRefe
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
-  const { childName, age, illustrationStyle, photoDataUrl, forceMock } = validation.value;
+  const { childName, gender, age, illustrationStyle, forceMock } = validation.value;
   const bodyRecord = body as Record<string, unknown>;
   const themeId = typeof bodyRecord.themeId === "string" ? bodyRecord.themeId : "space-adventure";
 
   if (!hasImageProvider() || forceMock) {
-    const description = generateMockCharacterDescription({ childName, age, hasPhoto: Boolean(photoDataUrl) });
-    const imageUrl = generateMockCharacterPortrait({ childName, themeId });
+    const description = generateMockCharacterDescription({ childName, gender, age });
+    const imageUrl = generateMockCharacterPortrait({ childName, gender, themeId });
     return NextResponse.json({ imageUrl, description, mode: "mock" });
   }
 
   try {
-    const { imageUrl, description } = await createCharacterReference({ photoDataUrl, childName, age, illustrationStyle });
+    const { imageUrl, description } = await createCharacterReference({ childName, gender, age, illustrationStyle });
     return NextResponse.json({ imageUrl, description, mode: "ai" });
   } catch (err) {
     console.error("[api/character] generation failed:", err);

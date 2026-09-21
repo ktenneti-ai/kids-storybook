@@ -1,14 +1,9 @@
-import { AGE_RANGES, ILLUSTRATION_STYLES, MAX_PHOTO_BYTES, STORY_LENGTHS, THEMES } from "./constants";
-import type { AgeRangeId } from "./types";
+import { AGE_RANGES, GENDER_OPTIONS, ILLUSTRATION_STYLES, STORY_LENGTHS, THEMES } from "./constants";
+import type { AgeRangeId, CharacterGender } from "./types";
 
 type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-const DATA_URL_RE = /^data:image\/(png|jpeg|jpg|webp);base64,([a-zA-Z0-9+/=]+)$/;
 const MAX_REFERENCE_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB — server-generated, not user-uploaded
-
-function estimateBase64Bytes(base64: string): number {
-  return Math.floor((base64.length * 3) / 4);
-}
 
 function validateChildName(b: Record<string, unknown>): ValidationResult<string> {
   const childName = typeof b.childName === "string" ? b.childName.trim() : "";
@@ -23,6 +18,12 @@ function validateAge(b: Record<string, unknown>): ValidationResult<AgeRangeId> {
   return { ok: true, value: age as AgeRangeId };
 }
 
+function validateGender(b: Record<string, unknown>): ValidationResult<CharacterGender> {
+  const gender = typeof b.gender === "string" ? b.gender : "";
+  if (!GENDER_OPTIONS.some((g) => g.id === gender)) return { ok: false, error: "Please choose boy or girl." };
+  return { ok: true, value: gender as CharacterGender };
+}
+
 function validateIllustrationStyle(b: Record<string, unknown>): ValidationResult<string> {
   const illustrationStyle = typeof b.illustrationStyle === "string" ? b.illustrationStyle : "";
   if (!ILLUSTRATION_STYLES.some((s) => s.id === illustrationStyle)) {
@@ -31,19 +32,10 @@ function validateIllustrationStyle(b: Record<string, unknown>): ValidationResult
   return { ok: true, value: illustrationStyle };
 }
 
-function validatePhoto(b: Record<string, unknown>): ValidationResult<string | null> {
-  if (typeof b.photoDataUrl !== "string" || b.photoDataUrl.length === 0) return { ok: true, value: null };
-  const match = DATA_URL_RE.exec(b.photoDataUrl);
-  if (!match) return { ok: false, error: "Photo must be a PNG, JPEG, or WEBP image." };
-  if (estimateBase64Bytes(match[2]) > MAX_PHOTO_BYTES) {
-    return { ok: false, error: "Photo is too large. Please upload an image under 5MB." };
-  }
-  return { ok: true, value: b.photoDataUrl };
-}
-
-/** The story-text endpoint only needs name/age/theme/length — no photo, no character appearance. */
+/** The story-text endpoint only needs name/gender/age/theme/length — no character appearance. */
 export function validateStoryInput(body: unknown): ValidationResult<{
   childName: string;
+  gender: CharacterGender;
   age: AgeRangeId;
   theme: string;
   length: number;
@@ -56,6 +48,9 @@ export function validateStoryInput(body: unknown): ValidationResult<{
   const childName = validateChildName(b);
   if (!childName.ok) return childName;
 
+  const gender = validateGender(b);
+  if (!gender.ok) return gender;
+
   const age = validateAge(b);
   if (!age.ok) return age;
 
@@ -67,15 +62,15 @@ export function validateStoryInput(body: unknown): ValidationResult<{
     return { ok: false, error: "Please choose a valid story length." };
   }
 
-  return { ok: true, value: { childName: childName.value, age: age.value, theme, length } };
+  return { ok: true, value: { childName: childName.value, gender: gender.value, age: age.value, theme, length } };
 }
 
-/** The character endpoint turns an optional photo + name/age into a reusable cartoon character reference image. */
+/** The character endpoint turns name/gender/age into a reusable cartoon character reference image. */
 export function validateCharacterInput(body: unknown): ValidationResult<{
   childName: string;
+  gender: CharacterGender;
   age: AgeRangeId;
   illustrationStyle: string;
-  photoDataUrl: string | null;
   forceMock: boolean;
 }> {
   if (typeof body !== "object" || body === null) {
@@ -86,22 +81,22 @@ export function validateCharacterInput(body: unknown): ValidationResult<{
   const childName = validateChildName(b);
   if (!childName.ok) return childName;
 
+  const gender = validateGender(b);
+  if (!gender.ok) return gender;
+
   const age = validateAge(b);
   if (!age.ok) return age;
 
   const illustrationStyle = validateIllustrationStyle(b);
   if (!illustrationStyle.ok) return illustrationStyle;
 
-  const photoDataUrl = validatePhoto(b);
-  if (!photoDataUrl.ok) return photoDataUrl;
-
   return {
     ok: true,
     value: {
       childName: childName.value,
+      gender: gender.value,
       age: age.value,
       illustrationStyle: illustrationStyle.value,
-      photoDataUrl: photoDataUrl.value,
       forceMock: b.forceMock === true,
     },
   };

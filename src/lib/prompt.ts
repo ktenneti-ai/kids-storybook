@@ -1,5 +1,5 @@
 import { findAge, findStyle, findTheme } from "./constants";
-import type { AgeRangeId, StoryPageContent } from "./types";
+import type { AgeRangeId, CharacterGender, StoryPageContent } from "./types";
 
 /**
  * Builds the user prompt sent to the text-generation model to produce the
@@ -8,16 +8,17 @@ import type { AgeRangeId, StoryPageContent } from "./types";
  * image at illustration time, not described here.
  */
 export function buildStoryPrompt(
-  input: { childName: string; age: AgeRangeId; theme: string; length: number },
+  input: { childName: string; gender: CharacterGender; age: AgeRangeId; theme: string; length: number },
   variationHint?: string
 ): string {
   const theme = findTheme(input.theme);
   const age = findAge(input.age);
+  const pronoun = input.gender === "girl" ? "she/her" : "he/him";
 
   return `You are a celebrated children's book author. Write an ORIGINAL story — never reuse or reference existing copyrighted characters, franchises, songs, or published stories.
 
 STORY BRIEF
-- Main character: ${input.childName}, who is brave, kind, and curious.
+- Main character: ${input.childName}, a ${input.gender} (pronouns: ${pronoun}), who is brave, kind, and curious.
 - Reader age range: ${age.label} (${age.description})
 - Theme: ${theme.label} — the story takes place in ${theme.promptFragment}.
 - Length: exactly ${input.length} pages (this does not include the cover).
@@ -42,44 +43,33 @@ Respond with ONLY valid JSON and nothing else — no markdown code fences, no co
 The "pages" array must contain exactly ${input.length} items, with "pageNumber" running from 1 to ${input.length} in order.`;
 }
 
-/** Prompt used to derive a text-only visual description from an uploaded photo (kept as reinforcement alongside the reference image). */
-export function buildCharacterAnalysisPrompt(childName: string, age: AgeRangeId): string {
-  return `Look at this photo of a child named ${childName} (age range ${age}). Write ONE short, warm, respectful sentence (max 40 words) describing their visual appearance for a children's book illustrator: approximate hair color/style, skin tone, and any notable clothing or accessory visible in the photo. Use tasteful, generic, kid-friendly language. Do not mention the photo, do not guess personal details beyond appearance, and do not include any text formatting — respond with the sentence only.`;
-}
-
-/** Generic character description used when no photo is provided. */
-export function buildDefaultCharacterDescription(input: { childName: string; age: AgeRangeId }): string {
+/** Generic character description used to seed the character reference image. */
+export function buildDefaultCharacterDescription(input: { childName: string; gender: CharacterGender; age: AgeRangeId }): string {
   const age = findAge(input.age);
-  return `${input.childName}, a cheerful ${age.label.replace(" years", "-year-old")} child with a bright smile and warm, expressive eyes, drawn in a friendly, inclusive style with simple everyday play clothes`;
+  return `${input.childName}, a cheerful ${age.label.replace(" years", "-year-old")} ${input.gender} with a bright smile and warm, expressive eyes, drawn in a friendly, inclusive style with simple everyday play clothes`;
 }
 
 /**
- * Prompt for turning an uploaded photo (or, with no photo, a text description)
- * into a single reusable cartoon character reference image — a clean
- * "character sheet" style portrait that every later illustration is
- * generated from via image-to-image editing.
+ * Prompt for generating a single reusable cartoon character reference image
+ * from a text description — a clean "character sheet" style portrait that
+ * every later illustration is generated from via image-to-image editing.
  */
 export function buildCharacterReferencePrompt(params: {
   childName: string;
+  gender: CharacterGender;
   age: AgeRangeId;
   illustrationStyle: string;
   description: string;
-  hasPhoto: boolean;
 }): string {
   const style = findStyle(params.illustrationStyle);
   const age = findAge(params.age);
-  const base = [
-    params.hasPhoto
-      ? `Turn the child shown in this reference photo into a single children's-book cartoon character named ${params.childName}, appropriate for a ${age.label} reader.`
-      : `Create a single children's-book cartoon character named ${params.childName}, a ${age.label} child.`,
+  return [
+    `Create a single children's-book cartoon character named ${params.childName}, a ${age.label} ${params.gender}.`,
     `${style.promptFragment}.`,
-    params.hasPhoto
-      ? `Preserve their recognizable features from the photo — face shape, hairstyle and hair color, skin tone, and general appearance — but rendered as a warm, friendly illustrated cartoon, never a photo-realistic image.`
-      : `Appearance: ${params.description}.`,
+    `Appearance: ${params.description}.`,
     "Show the character from head to at least the waist, facing slightly toward the viewer with a warm, friendly expression, standing on a plain, softly lit neutral background — this image will be reused as a character reference sheet for every later illustration, so keep the pose simple and clear.",
     "No text, letters, words, logos, or watermarks anywhere in the image. Wholesome and appropriate for young children.",
-  ];
-  return base.join(" ");
+  ].join(" ");
 }
 
 /**
@@ -109,7 +99,7 @@ export function buildStoryImagePrompt(params: {
 }): string {
   return [
     "Using the exact character shown in the reference image, illustrate this children's storybook page as a rich, cinematic full-page scene — the quality of a page from a premium published picture book, not a simple sketch, icon, or vector illustration.",
-    `Character reference notes (for when the photo/reference is ambiguous): ${params.characterDescription}.`,
+    `Character reference notes (for extra guidance alongside the reference image): ${params.characterDescription}.`,
     `Consistent world: ${params.settingDescription}.`,
     `The story text this illustration must visually match: "${params.storyPageText}"`,
     `Scene to draw: ${params.sceneDescription}.`,
@@ -131,7 +121,7 @@ export function buildCoverImagePrompt(params: {
   const theme = findTheme(params.themeId);
   return [
     `Using the exact character shown in the reference image, illustrate a storybook COVER for a book titled "${params.title}", set in ${theme.promptFragment}.`,
-    `Character reference notes (for when the photo/reference is ambiguous): ${params.characterDescription}.`,
+    `Character reference notes (for extra guidance alongside the reference image): ${params.characterDescription}.`,
     `Consistent world: ${params.settingDescription}.`,
     "This is a striking, cinematic, inviting hero cover image with the character front and center, full of warmth and a sense of adventure — a fully realized environment with depth, lighting, and atmosphere, never a flat or empty backdrop.",
     buildConsistencyPrompt(params.illustrationStyle),

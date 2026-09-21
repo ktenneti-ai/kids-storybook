@@ -1,15 +1,16 @@
 # StoryStars — AI Visual Storytelling for Kids
 
-Turn a child's photo into a consistent cartoon storybook character, then generate an original, fully illustrated
-children's book starring that character — every page's illustration actually shows the character performing the
-story's action, generated via image-to-image from one reference image so they stay recognizable throughout.
+Enter a child's name and pick boy or girl, and the app generates a single, consistent cartoon storybook character
+for them, then an original, fully illustrated children's book starring that character — every page's illustration
+actually shows the character performing the story's action, generated via image-to-image from one reference image
+so they stay recognizable throughout.
 
 ## Features
 
-- **Story creation wizard** — child's name, optional photo upload, age range, theme, page length, illustration style.
-- **Photo → cartoon character** — an uploaded photo is converted into a single reusable cartoon character reference
-  image (`createCharacterReference`), preserving face shape, hairstyle, and skin tone while rendering it as a warm
-  storybook illustration. With no photo, an original character is generated from a text description instead.
+- **Story creation wizard** — child's name, boy/girl, age range, theme, page length, illustration style (default:
+  glossy 3D Pixar-style cartoon).
+- **Name/gender → cartoon character** — a single reusable cartoon character reference image is generated from the
+  child's name, gender, and age (`createCharacterReference`), in the chosen illustration style.
 - **Original story generation** (`generateStory`) — an 8/10/12-page story (10 by default) with a title, a consistent
   world/setting description, and a detailed action/scene description for every page.
 - **Cinematic image-to-image illustration** (`generateCover`, `generateStoryImage`) — every page and the cover are
@@ -34,20 +35,19 @@ story's action, generated via image-to-image from one reference image so they st
   Demo Mode".
 - **Demo/offline mode** — if `ANTHROPIC_API_KEY` and/or `OPENAI_API_KEY` are missing, the app renders real
   illustrated scenes offline instead of calling any API: a layered sky/ground/character SVG composition (not a flat
-  color card or icon), with the character's look (skin tone, hair, outfit) seeded from the child's name so it stays
-  consistent across the whole demo book too. Clearly labeled "Demo mode" / "Sample style" in the UI so it's never
-  mistaken for real output.
+  color card or icon), with the character's look (skin tone, hair style/length by gender, outfit) seeded from the
+  child's name so it stays consistent across the whole demo book too. Clearly labeled "Demo mode" / "Sample style"
+  in the UI so it's never mistaken for real output.
 - **Responsive** — works on desktop, tablet, and mobile.
 
 ## Tech stack
 
 - [Next.js](https://nextjs.org) (App Router) + TypeScript
 - [Tailwind CSS v4](https://tailwindcss.com)
-- [Anthropic API](https://docs.anthropic.com) (`@anthropic-ai/sdk`) for story text generation and photo → text
-  appearance analysis
+- [Anthropic API](https://docs.anthropic.com) (`@anthropic-ai/sdk`) for story text generation
 - [OpenAI Images API](https://platform.openai.com/docs/guides/images) (`openai`, `gpt-image-1`) for the character
-  reference image and every illustration, via both `images.generate` (text → image, when there's no photo) and
-  `images.edit` (image-to-image, for the character-from-photo conversion and every later illustration)
+  reference image (`images.generate`, text → image) and every cover/page illustration (`images.edit`,
+  image-to-image from that reference)
 
 ## Project structure
 
@@ -55,15 +55,14 @@ story's action, generated via image-to-image from one reference image so they st
 src/
   app/
     page.tsx                    Renders <AppShell />
-    api/character/route.ts      POST — createCharacterReference: photo (or text) → cartoon character image
+    api/character/route.ts      POST — createCharacterReference: name/gender/age → cartoon character image
     api/story/route.ts          POST — generateStory: title, setting, and page-by-page text
     api/story/page/route.ts     POST — regeneratePageText: rewrite one page's text, rest of the book unchanged
     api/illustration/route.ts   POST — generateCover / generateStoryImage: one illustration, image-to-image
   components/
     AppShell.tsx                 Top-level view state machine (home / create / reader)
     home/HomeScreen.tsx           Landing page
-    create/CreateWizard.tsx       3-step story creation form
-    create/PhotoUpload.tsx        Photo upload + client-side validation/preview
+    create/CreateWizard.tsx       3-step story creation form (name, boy/girl, age/theme/length/style)
     reader/StorybookReader.tsx    Storybook reading view, nav, read-aloud, regenerate, staged loading copy
     reader/IllustrationFrame.tsx  Loading/ready/error states for one illustration
     ui/                           Small shared UI primitives (Button, ProgressBar, ErrorBanner, ...)
@@ -72,11 +71,11 @@ src/
     useReadAloud.ts                Wraps the browser speechSynthesis API
   lib/
     types.ts                      Shared data models (StoryInput, Story, StoryPage, CharacterReferenceResponse, ...)
-    constants.ts                   Themes, age ranges, lengths, illustration styles
+    constants.ts                   Themes, age ranges, genders, lengths, illustration styles
     prompt.ts                      Builds every prompt sent to the text/image models
     validation.ts                   Server-side request validation
-    ai/character.ts                 createCharacterReference — photo/text → cartoon character reference image
-    ai/text.ts                      generateStory — Anthropic client for story text + photo analysis
+    ai/character.ts                 createCharacterReference — name/gender/age → cartoon character reference image
+    ai/text.ts                      generateStory — Anthropic client for story text
     ai/image.ts                     generateCover / generateStoryImage / editImageWithReference — OpenAI client
     mock/                           Offline character portrait, story text, and illustrated-scene generators
 ```
@@ -86,21 +85,18 @@ UI logic, and prompt construction / mock generation live in their own modules un
 
 ## How character consistency works
 
-1. `createCharacterReference(photo | description)` → one cartoon character reference **image** (not just text),
-   generated via `images.edit` (from the photo) or `images.generate` (no photo).
-2. That single image is sent as the input to `images.edit` again for the cover and **every** page, built from six
+1. `createCharacterReference(name, gender, age)` → one cartoon character reference **image** (not just text),
+   generated via `images.generate` from a text description built from the child's name, gender, and age.
+2. That single image is sent as the input to `images.edit` for the cover and **every** page, built from six
    explicit inputs: `characterReference` (the image itself), `characterDescription` (text reinforcement),
    `storyPageText` (what actually happens on this page), `sceneDescription` (the action/pose to draw),
    `artStyle`, and a shared `consistencyPrompt` — one function (`buildConsistencyPrompt`) reused by every call so
-   the "must match the reference exactly" instruction never drifts between the cover, page, and character-creation
-   prompts.
+   the "must match the reference exactly" instruction never drifts between the cover and page prompts.
 3. Every illustration is generated from the *same* master reference (fan-out, not a chain), so inconsistencies from
    one page don't compound into the next.
-4. A short text description (from Claude's vision analysis of the photo, when available) rides along as a
-   lightweight reinforcement, not the primary consistency mechanism.
 
 This is a best-effort visual likeness via image-to-image editing — the strongest character consistency the current
-public `gpt-image-1` API supports — not pixel-exact face-cloning.
+public `gpt-image-1` API supports.
 
 ## Setup
 
@@ -120,7 +116,7 @@ Then fill in whichever keys you have in `.env.local`:
 
 | Variable                | Required?                     | Purpose                                                   |
 | ------------------------ | ------------------------------ | ----------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`      | Optional                      | Story text generation + photo → text appearance description |
+| `ANTHROPIC_API_KEY`      | Optional                      | Story text generation |
 | `ANTHROPIC_TEXT_MODEL`   | Optional (default: `claude-sonnet-5`) | Override the Claude model used                    |
 | `OPENAI_API_KEY`         | Optional                      | Character reference + cover + page illustrations (`gpt-image-1`) |
 | `OPENAI_IMAGE_MODEL`     | Optional (default: `gpt-image-1`) | Override the OpenAI image model                        |
@@ -151,9 +147,8 @@ npm run build-storybook      # static Storybook build
 
 ## Notes & limitations
 
-- **Photo handling**: an uploaded photo is sent once, in-memory, to the image model (to become the character
-  reference) and optionally to the vision model (for the short text description). It is never stored, logged, or
-  reused anywhere else.
+- **No photo upload**: the character is generated purely from the child's name, gender, and age — no image is
+  collected or sent anywhere.
 - **Content safety**: prompts explicitly require original, non-copyrighted, gentle, age-appropriate content with no
   violence or real danger, and instruct the image model to avoid embedded text/logos/watermarks.
 - **Stateless by design**: there's no database or server session, so the client holds the character reference image

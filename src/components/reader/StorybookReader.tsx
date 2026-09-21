@@ -54,7 +54,7 @@ export function StorybookReader({ pipeline, onNewStory, onHome }: StorybookReade
         <h2 className="font-display text-2xl font-bold text-violet-900">{currentTask ?? "Getting started…"}</h2>
         <p className="max-w-sm text-sm text-violet-600">
           {isCharacterPhase
-            ? "Turning the photo into a storybook character who'll star in every page."
+            ? "Designing a storybook character who'll star in every page."
             : "Our storyteller is dreaming up an original adventure just for this book."}
         </p>
       </main>

@@ -1,4 +1,15 @@
-import type { AgeOption, StyleOption, ThemeOption } from "./types";
+import type { AgeOption, CharacterGender, StyleOption, ThemeOption } from "./types";
+
+export interface GenderOption {
+  id: CharacterGender;
+  label: string;
+  emoji: string;
+}
+
+export const GENDER_OPTIONS: GenderOption[] = [
+  { id: "boy", label: "Boy", emoji: "👦" },
+  { id: "girl", label: "Girl", emoji: "👧" },
+];
 
 export const THEMES: ThemeOption[] = [
   {
@@ -93,6 +104,13 @@ export const STORY_LENGTHS = [8, 10, 12] as const;
 
 export const ILLUSTRATION_STYLES: StyleOption[] = [
   {
+    id: "pixar-3d",
+    label: "3D Pixar-Style Cartoon",
+    description: "Glossy, richly detailed 3D-rendered movie style, like a modern animated film.",
+    promptFragment:
+      "glossy, richly detailed 3D-rendered animated movie style (Pixar/Disney-caliber character animation), vibrant volumetric lighting and sun rays, expressive large eyes, soft global illumination and subsurface scattering on skin, cinematic depth of field, ultra-detailed textures and materials",
+  },
+  {
     id: "storybook-watercolor",
     label: "Colorful Picture Book",
     description: "Warm, colorful, classic children's picture book illustration.",
@@ -122,9 +140,6 @@ export const ILLUSTRATION_STYLES: StyleOption[] = [
   },
 ];
 
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
-export const ACCEPTED_PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
-
 export function findTheme(id: string): ThemeOption {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];
 }
@@ -135,4 +150,8 @@ export function findStyle(id: string): StyleOption {
 
 export function findAge(id: string): AgeOption {
   return AGE_RANGES.find((a) => a.id === id) ?? AGE_RANGES[1];
+}
+
+export function findGender(id: string): GenderOption {
+  return GENDER_OPTIONS.find((g) => g.id === id) ?? GENDER_OPTIONS[0];
 }

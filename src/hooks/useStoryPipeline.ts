@@ -65,6 +65,7 @@ export function useStoryPipeline() {
       title: target.kind === "cover" ? s.title : undefined,
       themeId: s.input.theme,
       childName: s.input.childName,
+      gender: s.input.gender,
       isCover: target.kind === "cover",
       forceMock,
       seed,
@@ -123,6 +124,7 @@ export function useStoryPipeline() {
 
       const storyResult = await postJson<StoryTextResponse>("/api/story", {
         childName: input.childName,
+        gender: input.gender,
         age: input.age,
         theme: input.theme,
         length: input.length,
@@ -172,9 +174,9 @@ export function useStoryPipeline() {
 
       const characterResult = await postJson<CharacterReferenceResponse>("/api/character", {
         childName: input.childName,
+        gender: input.gender,
         age: input.age,
         illustrationStyle: input.illustrationStyle,
-        photoDataUrl: input.photoDataUrl,
         themeId: input.theme,
         forceMock: useMock,
       });

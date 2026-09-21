@@ -11,11 +11,11 @@ const mockStory: StoryModel = {
   title: 'Emma and the Little Star',
   input: {
     childName: 'Emma',
+    gender: 'girl',
     age: '6-8',
     theme: 'space-adventure',
     length: 2,
     illustrationStyle: 'storybook-watercolor',
-    photoDataUrl: null,
   },
   characterReferenceImageUrl: PIXEL,
   characterReferenceStatus: 'ready',

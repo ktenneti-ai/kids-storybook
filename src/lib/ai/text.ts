@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { buildCharacterAnalysisPrompt, buildRegeneratePagePrompt, buildStoryPrompt } from "../prompt";
-import type { AgeRangeId, StoryPageContent } from "../types";
+import { buildRegeneratePagePrompt, buildStoryPrompt } from "../prompt";
+import type { AgeRangeId, CharacterGender, StoryPageContent } from "../types";
 
 const TEXT_MODEL = process.env.ANTHROPIC_TEXT_MODEL || "claude-sonnet-5";
 
@@ -16,42 +16,6 @@ function getClient(): Anthropic | null {
 
 export function hasTextProvider(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
-}
-
-const PHOTO_DATA_URL_RE = /^data:image\/(png|jpe?g|webp);base64,(.+)$/;
-
-/** Uses a vision-capable Claude model to turn an uploaded photo into a short, reusable text description. */
-export async function analyzeCharacterPhoto(photoDataUrl: string, childName: string, age: AgeRangeId): Promise<string> {
-  const anthropic = getClient();
-  if (!anthropic) throw new Error("Text provider is not configured.");
-
-  const match = PHOTO_DATA_URL_RE.exec(photoDataUrl);
-  if (!match) throw new Error("Unsupported photo format.");
-  const rawType = match[1] === "jpg" ? "jpeg" : match[1];
-  const mediaType = `image/${rawType}` as "image/png" | "image/jpeg" | "image/webp";
-  const base64 = match[2];
-
-  const response = await anthropic.messages.create({
-    model: TEXT_MODEL,
-    max_tokens: 200,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: buildCharacterAnalysisPrompt(childName, age) },
-        ],
-      },
-    ],
-  });
-
-  const text = response.content
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join(" ")
-    .trim();
-
-  if (!text) throw new Error("The photo could not be analyzed.");
-  return text;
 }
 
 interface RawStoryPayload {
@@ -99,7 +63,7 @@ function validateStoryPayload(payload: unknown, expectedLength: number): { title
 
 /** Writes the original story text: title, world/setting description, and page-by-page content. */
 export async function generateStory(
-  input: { childName: string; age: AgeRangeId; theme: string; length: number },
+  input: { childName: string; gender: CharacterGender; age: AgeRangeId; theme: string; length: number },
   variationHint?: string
 ): Promise<{ title: string; settingDescription: string; pages: StoryPageContent[] }> {
   const anthropic = getClient();

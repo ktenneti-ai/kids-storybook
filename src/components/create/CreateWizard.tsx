@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { AGE_RANGES, ILLUSTRATION_STYLES, STORY_LENGTHS, THEMES } from "@/lib/constants";
-import type { AgeRangeId, StoryInput } from "@/lib/types";
-import { PhotoUpload } from "./PhotoUpload";
+import { AGE_RANGES, GENDER_OPTIONS, ILLUSTRATION_STYLES, STORY_LENGTHS, THEMES } from "@/lib/constants";
+import type { AgeRangeId, CharacterGender, StoryInput } from "@/lib/types";
 
 interface CreateWizardProps {
   onSubmit: (input: StoryInput) => void;
@@ -16,7 +15,7 @@ const STEPS = ["Child", "Story details", "Review"] as const;
 export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
   const [step, setStep] = useState(0);
   const [childName, setChildName] = useState("");
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [gender, setGender] = useState<CharacterGender>("boy");
   const [age, setAge] = useState<AgeRangeId>("6-8");
   const [theme, setTheme] = useState(THEMES[0].id);
   const [length, setLength] = useState<number>(10);
@@ -26,6 +25,7 @@ export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
   const selectedTheme = THEMES.find((t) => t.id === theme)!;
   const selectedStyle = ILLUSTRATION_STYLES.find((s) => s.id === illustrationStyle)!;
   const selectedAge = AGE_RANGES.find((a) => a.id === age)!;
+  const selectedGender = GENDER_OPTIONS.find((g) => g.id === gender)!;
 
   const goNext = () => {
     if (step === 0) {
@@ -45,7 +45,7 @@ export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
   const goBack = () => (step === 0 ? onBack() : setStep((s) => s - 1));
 
   const handleSubmit = () => {
-    onSubmit({ childName: childName.trim(), photoDataUrl, age, theme, length, illustrationStyle });
+    onSubmit({ childName: childName.trim(), gender, age, theme, length, illustrationStyle });
   };
 
   return (
@@ -75,7 +75,7 @@ export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
             <div className="flex flex-col gap-6">
               <div>
                 <h2 className="font-display text-2xl font-bold text-violet-900">Who&apos;s the star of this story?</h2>
-                <p className="mt-1 text-sm text-violet-600">Tell us the child&apos;s name, and add a photo if you&apos;d like.</p>
+                <p className="mt-1 text-sm text-violet-600">Tell us the child&apos;s name and whether they&apos;re a boy or a girl.</p>
               </div>
               <div>
                 <label htmlFor="childName" className="mb-1.5 block text-sm font-semibold text-violet-800">
@@ -92,8 +92,22 @@ export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
                 {nameError ? <p className="mt-1.5 text-sm font-medium text-rose-600">{nameError}</p> : null}
               </div>
               <div>
-                <span className="mb-1.5 block text-sm font-semibold text-violet-800">Photo (optional)</span>
-                <PhotoUpload value={photoDataUrl} onChange={setPhotoDataUrl} />
+                <span className="mb-1.5 block text-sm font-semibold text-violet-800">Boy or girl?</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {GENDER_OPTIONS.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => setGender(g.id)}
+                      className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-4 py-4 transition ${
+                        gender === g.id ? "border-fuchsia-400 bg-fuchsia-50" : "border-violet-100 hover:border-violet-200"
+                      }`}
+                    >
+                      <span className="text-3xl">{g.emoji}</span>
+                      <span className="text-sm font-semibold text-violet-800">{g.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}
@@ -189,15 +203,12 @@ export function CreateWizard({ onSubmit, onBack }: CreateWizardProps) {
                 <p className="mt-1 text-sm text-violet-600">Here&apos;s what we&apos;ll create.</p>
               </div>
               <div className="flex items-center gap-4 rounded-2xl bg-violet-50 p-4">
-                {photoDataUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photoDataUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-violet-200 text-2xl">🧒</div>
-                )}
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-violet-200 text-3xl">{selectedGender.emoji}</div>
                 <div>
                   <div className="font-display text-lg font-bold text-violet-900">{childName || "Your child"}</div>
-                  <div className="text-sm text-violet-600">{selectedAge.label}</div>
+                  <div className="text-sm text-violet-600">
+                    {selectedGender.label} &middot; {selectedAge.label}
+                  </div>
                 </div>
               </div>
               <dl className="grid grid-cols-2 gap-3 text-sm">

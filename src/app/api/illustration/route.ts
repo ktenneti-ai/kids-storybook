@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateCover, generateStoryImage, hasImageProvider } from "@/lib/ai/image";
 import { generateDemoStoryIllustration } from "@/lib/mock/mockImage";
 import { validateIllustrationRequest } from "@/lib/validation";
-import type { ApiErrorResponse, IllustrationResponse } from "@/lib/types";
+import type { ApiErrorResponse, CharacterGender, IllustrationResponse } from "@/lib/types";
 
 export async function POST(req: NextRequest): Promise<NextResponse<IllustrationResponse | ApiErrorResponse>> {
   let body: unknown;
@@ -31,11 +31,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<IllustrationR
   } = validation.value;
   const bodyRecord = body as Record<string, unknown>;
   const childName = typeof bodyRecord.childName === "string" ? bodyRecord.childName : "";
+  const gender: CharacterGender = bodyRecord.gender === "girl" ? "girl" : "boy";
 
   if (!hasImageProvider() || forceMock) {
     const imageUrl = generateDemoStoryIllustration({
       themeId,
       childName,
+      gender,
       sceneDescription: isCover ? title : sceneDescription,
       isCover,
       seed,

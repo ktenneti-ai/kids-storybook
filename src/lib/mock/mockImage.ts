@@ -1,4 +1,5 @@
 import { findTheme } from "../constants";
+import type { CharacterGender } from "../types";
 import { pickCharacterLook, renderStandingFigure } from "./figure";
 import { hashString, mulberry32 } from "./random";
 
@@ -45,7 +46,7 @@ function renderAccentShape(kind: PropKind, cx: number, cy: number, size: number,
   }
 }
 
-function renderScene(params: { themeId: string; childName: string; layoutSeedKey: string; isCover: boolean }): string {
+function renderScene(params: { themeId: string; childName: string; gender: CharacterGender; layoutSeedKey: string; isCover: boolean }): string {
   const theme = findTheme(params.themeId);
   const sceneTheme = SCENE_THEME[theme.id] ?? SCENE_THEME["space-adventure"];
   const width = 800;
@@ -75,7 +76,7 @@ function renderScene(params: { themeId: string; childName: string; layoutSeedKey
   }
 
   const figureCx = width * (0.4 + layoutRng() * 0.2);
-  const figure = renderStandingFigure({ cx: figureCx, groundY, scale: params.isCover ? 1.35 : 1.1, look, poseSeed });
+  const figure = renderStandingFigure({ cx: figureCx, groundY, scale: params.isCover ? 1.35 : 1.1, look, gender: params.gender, poseSeed });
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
@@ -108,6 +109,7 @@ function renderScene(params: { themeId: string; childName: string; layoutSeedKey
 export function generateDemoStoryIllustration(params: {
   themeId: string;
   childName: string;
+  gender: CharacterGender;
   sceneDescription: string;
   isCover: boolean;
   seed: number;
@@ -115,6 +117,7 @@ export function generateDemoStoryIllustration(params: {
   const svg = renderScene({
     themeId: params.themeId,
     childName: params.childName,
+    gender: params.gender,
     layoutSeedKey: `${params.themeId}|${params.sceneDescription}|${params.seed}`,
     isCover: params.isCover,
   });
