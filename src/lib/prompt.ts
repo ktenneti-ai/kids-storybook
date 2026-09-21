@@ -27,7 +27,7 @@ WRITING RULES
 - Clear arc: a beginning that introduces ${input.childName} and the world, a middle with a gentle discovery or small challenge, and a warm, satisfying ending with a light positive message (friendship, courage, curiosity, kindness, or perseverance).
 - Tone and vocabulary must fit a ${age.label} reader, read aloud by a caregiver.
 - No violence, scary threats, weapons, danger of real harm, or anything inappropriate for young children. Conflicts must be gentle — e.g. solving a puzzle, helping a friend, overcoming a small fear, finding something lost.
-- Each page's "text" is 2-4 short sentences of the actual story, written in third person, in a storybook voice.
+- Each page's "text" is 1-3 short, rhythmic sentences of the actual story, written in third person, in a warm storybook voice that reads well aloud.
 - Each page's "illustrationPrompt" is one vivid, detailed sentence describing exactly what ${input.childName} is doing on that page — the action, pose, expression, and immediate surroundings — so an illustrator could draw it without seeing the story text. Do NOT describe ${input.childName}'s physical appearance in it (hair, face, clothing) — that is fixed separately by a character reference image.
 - "settingDescription" is 1-2 sentences describing the consistent visual world (location style, recurring props, color palette/mood) that should stay visually consistent across every illustration in the book.
 - "title" is a fun, whimsical book title (may include ${input.childName}'s name).
@@ -165,7 +165,7 @@ export function buildRegeneratePagePrompt(params: {
 FULL CURRENT STORY (for context — every page except the one requested must stay exactly as it is; do not summarize or rewrite the others):
 ${context}
 
-Rewrite ONLY page ${params.pageNumber}. It must still fit naturally between the pages immediately before and after it and must not contradict anything in the rest of the story. Produce a genuinely fresh alternative — different specific details, actions, and wording than the current page ${params.pageNumber} — while keeping a similar length (2-4 short sentences) and the same warm, age-appropriate tone as the rest of the book.
+Rewrite ONLY page ${params.pageNumber}. It must still fit naturally between the pages immediately before and after it and must not contradict anything in the rest of the story. Produce a genuinely fresh alternative — different specific details, actions, and wording than the current page ${params.pageNumber} — while keeping a similar length (1-3 short, rhythmic sentences) and the same warm, age-appropriate tone as the rest of the book.
 
 Respond with ONLY valid JSON and nothing else — no markdown code fences, no commentary:
 { "text": string, "illustrationPrompt": string }

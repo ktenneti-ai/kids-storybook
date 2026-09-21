@@ -111,6 +111,13 @@ export const ILLUSTRATION_STYLES: StyleOption[] = [
       "glossy, richly detailed 3D-rendered animated movie style (Pixar/Disney-caliber character animation), vibrant volumetric lighting and sun rays, expressive large eyes, soft global illumination and subsurface scattering on skin, cinematic depth of field, ultra-detailed textures and materials",
   },
   {
+    id: "ghibli-pixar",
+    label: "Ghibli-Pixar Storybook",
+    description: "Soft 2D animation blending Studio Ghibli's warmth with Pixar's polish.",
+    promptFragment:
+      "soft 2D modern animation style blending Studio Ghibli's painterly, hand-crafted backgrounds and gentle warmth with Pixar's polished, expressive character appeal, vibrant yet warm color palette, gentle cinematic lighting, whimsical storybook aesthetic, high detail",
+  },
+  {
     id: "storybook-watercolor",
     label: "Colorful Picture Book",
     description: "Warm, colorful, classic children's picture book illustration.",
